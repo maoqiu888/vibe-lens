@@ -1,16 +1,18 @@
 import { send } from "../../shared/api";
 import type { AnalyzeResult, Domain, Msg } from "../../shared/types";
+import { renderRecommendCard } from "./RecommendCard";
 import { copyPosterToClipboard, downloadPoster, generatePoster } from "./SharePoster";
 
 export interface VibeCardProps {
   parent: HTMLElement;
   result: AnalyzeResult;
   sourceDomain: Domain;
+  text: string;
   onClose: () => void;
 }
 
 export function renderVibeCard(props: VibeCardProps): HTMLElement {
-  const { parent, result, sourceDomain, onClose } = props;
+  const { parent, result, sourceDomain, text, onClose } = props;
   const card = document.createElement("div");
   card.className = "vr-card";
 
@@ -94,6 +96,23 @@ export function renderVibeCard(props: VibeCardProps): HTMLElement {
   actions.appendChild(star);
   actions.appendChild(bomb);
   card.appendChild(actions);
+
+  // Recommend link (lazy trigger at the very bottom)
+  const recommendLink = document.createElement("a");
+  recommendLink.className = "vr-recommend-link";
+  recommendLink.textContent = "> 寻找同频代餐";
+  recommendLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    recommendLink.style.display = "none";
+    renderRecommendCard({
+      parent: card,
+      text,
+      sourceDomain,
+      matchedTagIds: result.matched_tags.map((t) => t.tag_id),
+    });
+  });
+  card.appendChild(recommendLink);
 
   parent.appendChild(card);
   return card;

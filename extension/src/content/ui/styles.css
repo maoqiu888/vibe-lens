@@ -270,3 +270,54 @@
   85%  { opacity: 1; transform: translate(-50%, 0); }
   100% { opacity: 0; transform: translate(-50%, -4px); }
 }
+
+.vr-recommend-link {
+  display: block;
+  margin-top: 10px;
+  font-size: 11px;
+  color: #999;
+  cursor: pointer;
+  text-align: right;
+  transition: color 0.15s;
+}
+.vr-recommend-link:hover { color: #6c5ce7; }
+
+.vr-recommend-card {
+  margin-top: 8px;
+  position: relative;
+  top: auto;
+  left: auto;
+  background: #f8f7ff;
+  border: 1px solid rgba(108, 92, 231, 0.16);
+}
+
+.vr-recommend-body { display: flex; flex-direction: column; gap: 10px; }
+
+.vr-recommend-item {
+  padding: 8px 0;
+  border-bottom: 1px dashed rgba(108, 92, 231, 0.12);
+}
+.vr-recommend-item:last-child { border-bottom: none; }
+
+.vr-recommend-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 3px;
+}
+.vr-recommend-reason {
+  font-size: 11px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.vr-recommend-loading { color: #888; font-size: 12px; padding: 8px 0; text-align: center; }
+.vr-recommend-error { color: #d63031; font-size: 12px; padding: 8px 0; text-align: center; }
+
+.vr-reroll {
+  margin-top: 10px;
+  width: 100%;
+  background: #f0edff;
+  color: #6c5ce7;
+}
+.vr-reroll:disabled { opacity: 0.5; cursor: not-allowed; }

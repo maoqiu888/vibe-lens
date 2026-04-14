@@ -65,6 +65,7 @@ async function onIconClick(text: string, domain: Domain) {
       parent: currentIcon,
       result,
       sourceDomain: domain,
+      text,
       onClose: clearUi,
     });
   } catch (e: any) {
