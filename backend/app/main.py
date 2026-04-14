@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.routers import cold_start
+from app.routers import cold_start, vibe
 
 app = FastAPI(title="Vibe-Radar", version="1.0.0")
 
@@ -30,3 +30,4 @@ def health():
 
 
 app.include_router(cold_start.router)
+app.include_router(vibe.router)
