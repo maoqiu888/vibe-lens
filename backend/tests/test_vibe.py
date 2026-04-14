@@ -40,6 +40,13 @@ def _install_fake_roaster(monkeypatch, roast_text):
     monkeypatch.setattr(llm_roaster, "_default_llm_call", fake)
 
 
+def _install_fake_recommender(monkeypatch, items):
+    async def fake(system_prompt, user_prompt):
+        return json.dumps({"items": items})
+    from app.services import llm_recommender
+    monkeypatch.setattr(llm_recommender, "_default_llm_call", fake)
+
+
 def test_analyze_returns_match_score_and_updates_curiosity(monkeypatch):
     _init_profile()
     _install_fake_llm(monkeypatch, json.dumps({
@@ -144,3 +151,73 @@ def test_action_bomb_decrements_core_weight(monkeypatch):
     # Started at 15 (cold start), bomb = -10 → 5
     assert rel.core_weight == 5.0
     db.close()
+
+
+def test_recommend_happy_path_returns_3_cross_domain_items(monkeypatch):
+    _init_profile()
+    _install_fake_recommender(monkeypatch, [
+        {"domain": "game", "name": "《逃生》",     "reason": "幽闭窒息"},
+        {"domain": "book", "name": "《幽灵之家》", "reason": "心理压抑"},
+        {"domain": "music", "name": "Ben Frost",  "reason": "黑暗环境音"},
+    ])
+    r = client.post("/api/v1/vibe/recommend", json={
+        "text": "《闪灵》",
+        "source_domain": "movie",
+        "matched_tag_ids": [8, 11],
+    })
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body["items"]) == 3
+    assert {i["domain"] for i in body["items"]} == {"game", "book", "music"}
+    assert all(i["domain"] != "movie" for i in body["items"])
+
+
+def test_recommend_empty_tag_ids_rejected_by_pydantic(monkeypatch):
+    _init_profile()
+    r = client.post("/api/v1/vibe/recommend", json={
+        "text": "x",
+        "source_domain": "movie",
+        "matched_tag_ids": [],
+    })
+    assert r.status_code == 422
+
+
+def test_recommend_invalid_tag_ids_returns_400(monkeypatch):
+    _init_profile()
+    r = client.post("/api/v1/vibe/recommend", json={
+        "text": "x",
+        "source_domain": "movie",
+        "matched_tag_ids": [999],
+    })
+    assert r.status_code == 400
+    assert r.json()["error"]["code"] == "INVALID_TAG_IDS"
+
+
+def test_recommend_all_same_domain_returns_503(monkeypatch):
+    _init_profile()
+    _install_fake_recommender(monkeypatch, [
+        {"domain": "movie", "name": "a", "reason": "x"},
+        {"domain": "movie", "name": "b", "reason": "y"},
+    ])
+    r = client.post("/api/v1/vibe/recommend", json={
+        "text": "x",
+        "source_domain": "movie",
+        "matched_tag_ids": [1],
+    })
+    assert r.status_code == 503
+    assert r.json()["error"]["code"] == "NO_CROSS_DOMAIN"
+
+
+def test_recommend_llm_parse_failure_returns_503(monkeypatch):
+    _init_profile()
+    async def broken(system_prompt, user_prompt):
+        return "garbage"
+    from app.services import llm_recommender
+    monkeypatch.setattr(llm_recommender, "_default_llm_call", broken)
+    r = client.post("/api/v1/vibe/recommend", json={
+        "text": "x",
+        "source_domain": "movie",
+        "matched_tag_ids": [1],
+    })
+    assert r.status_code == 503
+    assert r.json()["error"]["code"] == "LLM_PARSE_FAIL"

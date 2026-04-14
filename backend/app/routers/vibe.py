@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.deps import get_current_user_id, get_db
+from app.models.vibe_tag import VibeTag
 from app.schemas.action import ActionRequest, ActionResponse
 from app.schemas.analyze import AnalyzeRequest, AnalyzeResponse, MatchedTag
-from app.services import llm_roaster, llm_tagger, profile_calc
+from app.schemas.recommend import RecommendRequest, RecommendResponse
+from app.services import llm_recommender, llm_roaster, llm_tagger, profile_calc
 
 router = APIRouter(prefix="/api/v1/vibe", tags=["vibe"])
 
@@ -76,3 +79,53 @@ def action(
         action=payload.action,
     )
     return ActionResponse(status="ok", updated_tags=len(payload.matched_tag_ids))
+
+
+@router.post("/recommend", response_model=RecommendResponse)
+async def recommend(
+    payload: RecommendRequest,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    # 1. Resolve tag_ids → tag names, fail if any id is out of range
+    tags = db.scalars(
+        select(VibeTag).where(VibeTag.id.in_(payload.matched_tag_ids))
+    ).all()
+    if len(tags) != len(set(payload.matched_tag_ids)):
+        raise HTTPException(
+            status_code=400,
+            detail={"error": {
+                "code": "INVALID_TAG_IDS",
+                "message": "one or more tag_ids are not in the 1-24 pool",
+            }},
+        )
+    item_tag_names = [t.name for t in tags]
+
+    # 2. User's top-3 core_weight tags for prompt context
+    user_top_tag_names = profile_calc.get_top_core_tag_names(user_id=user_id, n=3)
+
+    # 3. LLM call with cross-domain filtering
+    try:
+        items = await llm_recommender.recommend(
+            text=payload.text,
+            source_domain=payload.source_domain,
+            item_tag_names=item_tag_names,
+            user_top_tag_names=user_top_tag_names,
+        )
+    except llm_recommender.LlmParseError as e:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": {"code": "LLM_PARSE_FAIL", "message": str(e)}},
+        )
+    except llm_recommender.LlmTimeoutError as e:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": {"code": "LLM_TIMEOUT", "message": str(e)}},
+        )
+    except llm_recommender.RecommendEmptyError as e:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": {"code": "NO_CROSS_DOMAIN", "message": str(e)}},
+        )
+
+    return RecommendResponse(items=items)
