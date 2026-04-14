@@ -86,3 +86,35 @@ def test_compute_radar_returns_6_dimensions(seeded_user):
     }
     for d in data["dimensions"]:
         assert 0 <= d["score"] <= 100
+
+
+def test_get_top_core_tag_names_returns_top_3_by_core_weight(seeded_user):
+    db = database.SessionLocal()
+    db.query(UserVibeRelation).filter_by(user_id=1, vibe_tag_id=1).one().core_weight = 30.0
+    db.query(UserVibeRelation).filter_by(user_id=1, vibe_tag_id=5).one().core_weight = 20.0
+    db.query(UserVibeRelation).filter_by(user_id=1, vibe_tag_id=9).one().core_weight = 10.0
+    db.query(UserVibeRelation).filter_by(user_id=1, vibe_tag_id=13).one().core_weight = 5.0
+    db.commit()
+    db.close()
+
+    names = profile_calc.get_top_core_tag_names(user_id=1, n=3)
+    assert len(names) == 3
+    assert names[0] == "慢炖沉浸"
+    assert names[1] == "治愈温暖"
+    assert names[2] == "放空友好"
+
+
+def test_get_top_core_tag_names_excludes_zero_and_negative_weights(seeded_user):
+    db = database.SessionLocal()
+    db.query(UserVibeRelation).filter_by(user_id=1, vibe_tag_id=1).one().core_weight = 10.0
+    db.query(UserVibeRelation).filter_by(user_id=1, vibe_tag_id=2).one().core_weight = -5.0
+    db.commit()
+    db.close()
+
+    names = profile_calc.get_top_core_tag_names(user_id=1, n=3)
+    assert names == ["慢炖沉浸"]
+
+
+def test_get_top_core_tag_names_cold_start_user_returns_empty(seeded_user):
+    names = profile_calc.get_top_core_tag_names(user_id=1, n=3)
+    assert names == []

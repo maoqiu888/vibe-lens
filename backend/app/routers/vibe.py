@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.deps import get_current_user_id, get_db
 from app.schemas.action import ActionRequest, ActionResponse
 from app.schemas.analyze import AnalyzeRequest, AnalyzeResponse, MatchedTag
-from app.services import llm_tagger, profile_calc
+from app.services import llm_roaster, llm_tagger, profile_calc
 
 router = APIRouter(prefix="/api/v1/vibe", tags=["vibe"])
 
@@ -33,9 +33,19 @@ async def analyze(
         )
 
     matched_tag_ids = [t["tag_id"] for t in result["matched_tags"]]
+    matched_tag_names = [t["name"] for t in result["matched_tags"]]
     item_tags = [(t["tag_id"], t["weight"]) for t in result["matched_tags"]]
 
     score = profile_calc.compute_match_score(user_id=user_id, item_tags=item_tags)
+
+    user_top_tag_names = profile_calc.get_top_core_tag_names(user_id=user_id, n=3)
+    roast = await llm_roaster.generate_roast(
+        text=payload.text,
+        domain=payload.domain,
+        item_tag_names=matched_tag_names,
+        user_top_tag_names=user_top_tag_names,
+    )
+
     profile_calc.apply_curiosity_delta(
         user_id=user_id,
         tag_ids=matched_tag_ids,
@@ -46,6 +56,7 @@ async def analyze(
     return AnalyzeResponse(
         match_score=score,
         summary=result["summary"],
+        roast=roast,
         matched_tags=[MatchedTag(**t) for t in result["matched_tags"]],
         text_hash=result["text_hash"],
         cache_hit=result["cache_hit"],

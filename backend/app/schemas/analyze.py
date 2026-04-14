@@ -21,6 +21,7 @@ class MatchedTag(BaseModel):
 class AnalyzeResponse(BaseModel):
     match_score: int
     summary: str
+    roast: str = ""
     matched_tags: list[MatchedTag]
     text_hash: str
     cache_hit: bool

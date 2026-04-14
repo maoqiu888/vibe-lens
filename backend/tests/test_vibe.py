@@ -33,11 +33,19 @@ def _install_fake_llm(monkeypatch, response):
     monkeypatch.setattr(llm_tagger, "_default_llm_call", fake)
 
 
+def _install_fake_roaster(monkeypatch, roast_text):
+    async def fake(system_prompt, user_prompt):
+        return json.dumps({"roast": roast_text})
+    from app.services import llm_roaster
+    monkeypatch.setattr(llm_roaster, "_default_llm_call", fake)
+
+
 def test_analyze_returns_match_score_and_updates_curiosity(monkeypatch):
     _init_profile()
     _install_fake_llm(monkeypatch, json.dumps({
         "tags": [{"tag_id": 1, "weight": 0.9}], "summary": "slow"
     }))
+    _install_fake_roaster(monkeypatch, "慢炖神作，你会睡着但心满意足")
     r = client.post("/api/v1/vibe/analyze",
                     json={"text": "A gentle slow piece", "domain": "book"})
     assert r.status_code == 200
@@ -45,6 +53,7 @@ def test_analyze_returns_match_score_and_updates_curiosity(monkeypatch):
     assert body["match_score"] > 0
     assert body["matched_tags"][0]["tag_id"] == 1
     assert body["cache_hit"] is False
+    assert body["roast"] == "慢炖神作，你会睡着但心满意足"
 
     db = database.SessionLocal()
     rel = db.scalar(
@@ -62,6 +71,7 @@ def test_analyze_second_call_hits_cache(monkeypatch):
     _install_fake_llm(monkeypatch, json.dumps({
         "tags": [{"tag_id": 1, "weight": 0.9}], "summary": "slow"
     }))
+    _install_fake_roaster(monkeypatch, "roast text")
     client.post("/api/v1/vibe/analyze",
                 json={"text": "same text", "domain": "book"})
     r = client.post("/api/v1/vibe/analyze",
@@ -72,10 +82,31 @@ def test_analyze_second_call_hits_cache(monkeypatch):
 def test_analyze_llm_parse_failure_returns_503(monkeypatch):
     _init_profile()
     _install_fake_llm(monkeypatch, "garbage")
+    _install_fake_roaster(monkeypatch, "unused")
     r = client.post("/api/v1/vibe/analyze",
                     json={"text": "x is too short anyway", "domain": "book"})
     assert r.status_code == 503
     assert r.json()["error"]["code"] == "LLM_PARSE_FAIL"
+
+
+def test_analyze_roaster_failure_returns_empty_roast(monkeypatch):
+    """If the roaster fails, analyze still returns 200 with roast=''."""
+    _init_profile()
+    _install_fake_llm(monkeypatch, json.dumps({
+        "tags": [{"tag_id": 1, "weight": 0.9}], "summary": "slow"
+    }))
+
+    async def broken_roaster(system_prompt, user_prompt):
+        raise RuntimeError("boom")
+    from app.services import llm_roaster
+    monkeypatch.setattr(llm_roaster, "_default_llm_call", broken_roaster)
+
+    r = client.post("/api/v1/vibe/analyze",
+                    json={"text": "A gentle slow piece", "domain": "book"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["roast"] == ""
+    assert body["match_score"] >= 0
 
 
 def test_action_star_increments_core_weight(monkeypatch):

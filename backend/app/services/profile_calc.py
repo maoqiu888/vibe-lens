@@ -121,3 +121,29 @@ def compute_radar(user_id: int) -> dict:
             "dominant_tag": {"tag_id": dominant.id, "name": dominant.name},
         })
     return {"dimensions": dimensions}
+
+
+def get_top_core_tag_names(user_id: int, n: int = 3) -> list[str]:
+    """Return the names of the N tags with highest core_weight for this user.
+
+    Used by the analyze router to pass 'user_top_tag_names' into the roaster
+    and recommender prompts. Ties are broken by tag_id ascending. Returns an
+    empty list if the user has no relations yet (cold-start state) or all
+    weights are zero/negative.
+    """
+    db = database.SessionLocal()
+    try:
+        rels = db.scalars(
+            select(UserVibeRelation).where(UserVibeRelation.user_id == user_id)
+        ).all()
+        if not rels:
+            return []
+        sorted_rels = sorted(rels, key=lambda r: (-r.core_weight, r.vibe_tag_id))
+        top_ids = [r.vibe_tag_id for r in sorted_rels[:n] if r.core_weight > 0]
+        if not top_ids:
+            return []
+        tags = db.scalars(select(VibeTag).where(VibeTag.id.in_(top_ids))).all()
+        tag_by_id = {t.id: t.name for t in tags}
+        return [tag_by_id[tid] for tid in top_ids if tid in tag_by_id]
+    finally:
+        db.close()
