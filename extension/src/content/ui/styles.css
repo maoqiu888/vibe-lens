@@ -72,5 +72,123 @@
 .vr-btn.star { background: #ffeaa7; color: #b8860b; }
 .vr-btn.bomb { background: #ffe0e0; color: #d63031; }
 
-.vr-loading { color: #888; padding: 8px 0; }
-.vr-error { color: #d63031; padding: 8px 0; }
+.vr-loading {
+  padding: 32px 20px 22px;
+  text-align: center;
+  color: #6c5ce7;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at top, rgba(108, 92, 231, 0.1), transparent 70%),
+    #fdfcff;
+  border: 1px solid rgba(108, 92, 231, 0.12);
+}
+
+.vr-ping {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 18px;
+}
+
+.vr-ping-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid #6c5ce7;
+  border-radius: 50%;
+  opacity: 0;
+  transform: scale(0.2);
+  animation: vr-ping 2.1s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+.vr-ping-ring:nth-child(2) { animation-delay: 0.7s; }
+.vr-ping-ring:nth-child(3) { animation-delay: 1.4s; }
+
+@keyframes vr-ping {
+  0%   { transform: scale(0.2); opacity: 0; }
+  15%  { opacity: 0.9; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+.vr-ping-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  box-shadow: 0 0 12px rgba(108, 92, 231, 0.6);
+  animation: vr-core-breath 1.8s ease-in-out infinite;
+}
+
+@keyframes vr-core-breath {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 12px rgba(108, 92, 231, 0.6); }
+  50%      { transform: scale(1.18); box-shadow: 0 0 20px rgba(108, 92, 231, 0.9); }
+}
+
+.vr-loading-text {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: #6c5ce7;
+  margin-bottom: 14px;
+  animation: vr-text-fade 2.2s ease-in-out infinite;
+}
+
+@keyframes vr-text-fade {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+
+.vr-loading-dots {
+  display: inline-block;
+  width: 18px;
+  text-align: left;
+}
+.vr-loading-dots::after {
+  content: "";
+  animation: vr-dots 1.4s steps(4, end) infinite;
+}
+
+@keyframes vr-dots {
+  0%   { content: ""; }
+  25%  { content: "·"; }
+  50%  { content: "··"; }
+  75%  { content: "···"; }
+  100% { content: ""; }
+}
+
+.vr-shimmer-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  overflow: hidden;
+  background: rgba(108, 92, 231, 0.08);
+}
+.vr-shimmer-bar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg,
+    transparent, #a29bfe, #6c5ce7, #a29bfe, transparent);
+  animation: vr-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes vr-shimmer {
+  0%   { left: -40%; }
+  100% { left: 100%; }
+}
+
+.vr-error {
+  color: #d63031;
+  padding: 14px 16px;
+  font-size: 13px;
+  text-align: center;
+  background: #fff5f5;
+  border: 1px solid rgba(214, 48, 49, 0.2);
+}

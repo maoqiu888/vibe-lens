@@ -36,7 +36,16 @@ async function onIconClick(text: string, domain: Domain) {
   // Show loading state inside the icon's wrap
   const loading = document.createElement("div");
   loading.className = "vr-card vr-loading";
-  loading.textContent = "鉴定中…";
+  loading.innerHTML = `
+    <div class="vr-ping">
+      <div class="vr-ping-ring"></div>
+      <div class="vr-ping-ring"></div>
+      <div class="vr-ping-ring"></div>
+      <div class="vr-ping-core"></div>
+    </div>
+    <div class="vr-loading-text">正在读取你的审美指纹<span class="vr-loading-dots"></span></div>
+    <div class="vr-shimmer-bar"></div>
+  `;
   currentIcon.appendChild(loading);
 
   const msg: Msg = {
