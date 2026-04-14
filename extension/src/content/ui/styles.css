@@ -1,0 +1,76 @@
+:host { all: initial; }
+
+.vr-root {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #1a1a1a;
+  position: absolute;
+  pointer-events: none;
+}
+
+.vr-floating-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+  box-shadow: 0 2px 8px rgba(108, 92, 231, 0.4);
+  cursor: pointer;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  transition: transform 0.15s ease;
+}
+.vr-floating-icon:hover { transform: scale(1.1); }
+
+.vr-card {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  width: 320px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  padding: 16px;
+  pointer-events: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.vr-score {
+  font-size: 32px;
+  font-weight: 700;
+  color: #6c5ce7;
+}
+
+.vr-summary {
+  margin: 8px 0 12px;
+  color: #555;
+}
+
+.vr-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+.vr-tag {
+  padding: 2px 8px;
+  background: #f0edff;
+  color: #6c5ce7;
+  border-radius: 10px;
+  font-size: 11px;
+}
+
+.vr-actions { display: flex; gap: 8px; }
+.vr-btn {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: transform 0.1s;
+}
+.vr-btn:hover { transform: translateY(-1px); }
+.vr-btn.star { background: #ffeaa7; color: #b8860b; }
+.vr-btn.bomb { background: #ffe0e0; color: #d63031; }
+
+.vr-loading { color: #888; padding: 8px 0; }
+.vr-error { color: #d63031; padding: 8px 0; }
