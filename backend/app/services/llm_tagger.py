@@ -105,14 +105,6 @@ async def analyze(text: str, domain: str,
                 "cache_hit": True,
             }
 
-        # Drop any expired entry sharing this hash so the unique index frees up.
-        stale = db.scalar(
-            select(AnalysisCache).where(AnalysisCache.text_hash == text_hash)
-        )
-        if stale is not None:
-            db.delete(stale)
-            db.commit()
-
         tag_pool = _load_tag_pool()
         raw = await llm_call(text, domain, tag_pool)
         try:
@@ -129,6 +121,15 @@ async def analyze(text: str, domain: str,
         ]
         if not valid:
             raise LlmParseError("all tag_ids out of range")
+
+        # Drop any expired entry sharing this hash so the unique index frees up.
+        # Done AFTER validation so a parse/timeout failure does not wipe the row.
+        stale = db.scalar(
+            select(AnalysisCache).where(AnalysisCache.text_hash == text_hash)
+        )
+        if stale is not None:
+            db.delete(stale)
+            db.flush()
 
         db.add(AnalysisCache(
             text_hash=text_hash,

@@ -102,3 +102,24 @@ async def test_expired_cache_is_ignored():
     result = await llm_tagger.analyze("old", "book", fake)
     assert fake.calls == 1
     assert result["summary"] == "fresh"
+
+
+async def test_parse_failure_preserves_existing_expired_row():
+    seed_all()
+    text_hash = llm_tagger.hash_text("probe", "book")
+    db = database.SessionLocal()
+    db.add(AnalysisCache(
+        text_hash=text_hash, domain="book",
+        tags_json='{"tags":[{"tag_id":1,"weight":1.0}],"summary":"old"}',
+        summary="old",
+        created_at=datetime.utcnow() - timedelta(days=8),
+    ))
+    db.commit(); db.close()
+
+    fake = FakeLLM(response="garbage")
+    with pytest.raises(llm_tagger.LlmParseError):
+        await llm_tagger.analyze("probe", "book", fake)
+
+    db = database.SessionLocal()
+    assert db.query(AnalysisCache).filter_by(text_hash=text_hash).count() == 1
+    db.close()
