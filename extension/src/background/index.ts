@@ -51,6 +51,12 @@ async function routeApi(msg: Msg): Promise<unknown> {
       });
     case "GET_RADAR":
       return fetchJson("GET", "/profile/radar");
+    case "RECOMMEND":
+      return fetchJson("POST", "/vibe/recommend", {
+        text: msg.payload.text,
+        source_domain: msg.payload.sourceDomain,
+        matched_tag_ids: msg.payload.matchedTagIds,
+      });
   }
 }
 

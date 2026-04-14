@@ -9,6 +9,7 @@ export interface MatchedTag {
 export interface AnalyzeResult {
   match_score: number;
   summary: string;
+  roast: string;
   matched_tags: MatchedTag[];
   text_hash: string;
   cache_hit: boolean;
@@ -52,12 +53,23 @@ export interface RadarResult {
   total_action_count: number;
 }
 
+export interface RecommendItem {
+  domain: Domain;
+  name: string;
+  reason: string;
+}
+
+export interface RecommendResult {
+  items: RecommendItem[];
+}
+
 export type Msg =
   | { type: "ANALYZE"; payload: { text: string; domain: Domain; pageTitle: string; pageUrl: string } }
   | { type: "ACTION"; payload: { action: "star" | "bomb"; matchedTagIds: number[]; textHash?: string } }
   | { type: "COLD_START_GET_CARDS" }
   | { type: "COLD_START_SUBMIT"; payload: { selectedTagIds: number[] } }
-  | { type: "GET_RADAR" };
+  | { type: "GET_RADAR" }
+  | { type: "RECOMMEND"; payload: { text: string; sourceDomain: Domain; matchedTagIds: number[] } };
 
 export type MsgResponse<T> =
   | { ok: true; data: T }
