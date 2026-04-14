@@ -66,7 +66,8 @@ async function onIconClick(text: string, domain: Domain) {
   }
 }
 
-document.addEventListener("mouseup", () => {
+document.addEventListener("mouseup", (e) => {
+  if ((e.target as Element | null)?.closest("#vibe-radar-host")) return;
   const sel = window.getSelection();
   const text = sel?.toString().trim() ?? "";
   if (text.length < MIN_TEXT_LEN || text.length > MAX_TEXT_LEN) {
