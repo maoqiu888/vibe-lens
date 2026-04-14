@@ -23,6 +23,7 @@ vibe4.0/
 
 **Conventions:**
 - Commit after every passing test group. Conventional Commits style (`feat:`, `test:`, `chore:`).
+- **Database session access in tests and services:** Always use `from app import database; db = database.SessionLocal()` (attribute access), never `from app.database import SessionLocal`. The test fixture rebinds `database.SessionLocal` at runtime, and `from X import Y` at module top would capture the stale production binding and silently hit the dev DB.
 - Backend: strict TDD — write failing test → run it → implement → run passing → commit.
 - Extension: no automated tests in V1.0 — manual smoke via `extension/SMOKE.md` at the end. Commit after each task completes a buildable milestone.
 - Use `pytest -x -v` when running tests so failures stop immediately.
@@ -255,30 +256,72 @@ Empty file:
 - [ ] **Step 9: Create `backend/tests/conftest.py`**
 
 ```python
-import os
-import tempfile
-from pathlib import Path
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 import pytest
 
 
 @pytest.fixture(autouse=True)
-def _isolated_db(monkeypatch):
-    """Each test runs against its own temp SQLite file."""
-    tmp = tempfile.mkdtemp()
-    db_file = Path(tmp) / "test.db"
-    monkeypatch.setenv("DB_PATH", str(db_file))
+def _isolated_db(tmp_path, monkeypatch):
+    """Each test runs against its own temp SQLite file.
 
-    # Force settings + engine reload for this test
-    from importlib import reload
-    from app import config, database
-    reload(config)
-    reload(database)
+    Why not `importlib.reload`? reload creates a fresh `Base` class whose
+    metadata has no models registered. Models register against the original
+    `Base` at import time, so we keep that `Base` alive and just swap
+    `engine` / `SessionLocal` via attribute assignment.
 
-    from app.database import Base, engine
-    Base.metadata.create_all(engine)
-    yield
-    Base.metadata.drop_all(engine)
+    Corollary: all service code must access the session via
+    `from app import database; database.SessionLocal()` (attribute lookup),
+    not `from app.database import SessionLocal` (which would capture the
+    production binding at import and skip this fixture).
+    """
+    from app import database
+    from app.database import Base
+
+    db_file = tmp_path / "test.db"
+    test_engine = create_engine(
+        f"sqlite:///{db_file}",
+        connect_args={"check_same_thread": False},
+        future=True,
+    )
+    TestSession = sessionmaker(
+        bind=test_engine, autoflush=False, autocommit=False, future=True
+    )
+
+    monkeypatch.setattr(database, "engine", test_engine)
+    monkeypatch.setattr(database, "SessionLocal", TestSession)
+
+    Base.metadata.create_all(test_engine)
+
+    # Dependency override for FastAPI routes (only if app.deps exists —
+    # it's created in Task 7, not present at Task 1).
+    override_installed = False
+    try:
+        from app.deps import get_db
+        from app.main import app
+
+        def _override_get_db():
+            db = TestSession()
+            try:
+                yield db
+            finally:
+                db.close()
+
+        app.dependency_overrides[get_db] = _override_get_db
+        override_installed = True
+    except ImportError:
+        pass
+
+    try:
+        yield
+    finally:
+        if override_installed:
+            from app.deps import get_db
+            from app.main import app
+            app.dependency_overrides.pop(get_db, None)
+        Base.metadata.drop_all(test_engine)
+        test_engine.dispose()
 ```
 
 - [ ] **Step 10: Install deps and run health test**
@@ -320,7 +363,8 @@ git commit -m "feat(backend): scaffold FastAPI + SQLAlchemy project"
 ```python
 from sqlalchemy import select
 
-from app.database import Base, SessionLocal, engine
+from app import database
+from app.database import Base
 from app.models.action_log import ActionLog
 from app.models.analysis_cache import AnalysisCache
 from app.models.user import User
@@ -329,8 +373,8 @@ from app.models.vibe_tag import VibeTag
 
 
 def test_tables_are_created_and_basic_crud_works():
-    Base.metadata.create_all(engine)
-    db = SessionLocal()
+    Base.metadata.create_all(database.engine)
+    db = database.SessionLocal()
 
     # users
     u = User(id=1, username="default")
@@ -527,14 +571,14 @@ git commit -m "feat(backend): add SQLAlchemy models for users/tags/relations/cac
 ```python
 from sqlalchemy import select
 
-from app.database import SessionLocal
+from app import database
 from app.models.vibe_tag import VibeTag
 from app.services.seed import seed_all
 
 
 def test_seed_inserts_24_tags_with_opposite_relations():
     seed_all()
-    db = SessionLocal()
+    db = database.SessionLocal()
     tags = db.scalars(select(VibeTag).order_by(VibeTag.id)).all()
     assert len(tags) == 24
 
@@ -558,7 +602,7 @@ def test_seed_inserts_24_tags_with_opposite_relations():
 def test_seed_is_idempotent():
     seed_all()
     seed_all()  # second call must not duplicate
-    db = SessionLocal()
+    db = database.SessionLocal()
     assert db.scalar(select(VibeTag).where(VibeTag.id == 1)).name == "慢炖沉浸"
     assert len(db.scalars(select(VibeTag)).all()) == 24
     db.close()
@@ -678,15 +722,16 @@ def compute_opposite(tag_id: int) -> int:
 ```python
 from sqlalchemy import select
 
-from app.database import Base, SessionLocal, engine
+from app import database
+from app.database import Base
 from app.models.vibe_tag import VibeTag
 from app.services.seed_data import TAGS, compute_opposite
 
 
 def seed_all() -> None:
     """Idempotent: create schema and insert 24 tags if absent."""
-    Base.metadata.create_all(engine)
-    db = SessionLocal()
+    Base.metadata.create_all(database.engine)
+    db = database.SessionLocal()
     try:
         existing = db.scalar(select(VibeTag).where(VibeTag.id == 1))
         if existing is not None:
@@ -739,7 +784,7 @@ git commit -m "feat(backend): seed 24 vibe tags with opposite relations"
 ```python
 import pytest
 
-from app.database import SessionLocal
+from app import database
 from app.models.action_log import ActionLog
 from app.models.user import User
 from app.models.user_vibe_relation import UserVibeRelation
@@ -750,7 +795,7 @@ from app.services.seed import seed_all
 @pytest.fixture
 def seeded_user():
     seed_all()
-    db = SessionLocal()
+    db = database.SessionLocal()
     db.add(User(id=1, username="default"))
     for tag_id in range(1, 25):
         db.add(UserVibeRelation(user_id=1, vibe_tag_id=tag_id,
@@ -767,7 +812,7 @@ def test_compute_match_score_zero_profile_returns_zero(seeded_user):
 
 
 def test_compute_match_score_perfect_match_is_100(seeded_user):
-    db = SessionLocal()
+    db = database.SessionLocal()
     rel = db.query(UserVibeRelation).filter_by(user_id=1, vibe_tag_id=1).one()
     rel.core_weight = 15.0
     db.commit()
@@ -779,7 +824,7 @@ def test_compute_match_score_perfect_match_is_100(seeded_user):
 
 def test_core_weight_is_3x_curiosity_weight(seeded_user):
     """effective = core*1.0 + curiosity*0.3"""
-    db = SessionLocal()
+    db = database.SessionLocal()
     r1 = db.query(UserVibeRelation).filter_by(user_id=1, vibe_tag_id=1).one()
     r2 = db.query(UserVibeRelation).filter_by(user_id=1, vibe_tag_id=2).one()
     r1.core_weight = 10.0
@@ -796,7 +841,7 @@ def test_core_weight_is_3x_curiosity_weight(seeded_user):
 def test_apply_curiosity_delta_updates_weight_and_writes_log(seeded_user):
     profile_calc.apply_curiosity_delta(user_id=1, tag_ids=[1, 2], delta=0.5,
                                        action="analyze")
-    db = SessionLocal()
+    db = database.SessionLocal()
     r1 = db.query(UserVibeRelation).filter_by(user_id=1, vibe_tag_id=1).one()
     assert r1.curiosity_weight == 0.5
     logs = db.query(ActionLog).filter_by(user_id=1).all()
@@ -808,7 +853,7 @@ def test_apply_curiosity_delta_updates_weight_and_writes_log(seeded_user):
 def test_apply_core_delta_updates_weight_and_writes_log(seeded_user):
     profile_calc.apply_core_delta(user_id=1, tag_ids=[1], delta=10.0,
                                   action="star")
-    db = SessionLocal()
+    db = database.SessionLocal()
     r1 = db.query(UserVibeRelation).filter_by(user_id=1, vibe_tag_id=1).one()
     assert r1.core_weight == 10.0
     log = db.query(ActionLog).filter_by(user_id=1).one()
@@ -842,7 +887,7 @@ from datetime import datetime
 import numpy as np
 from sqlalchemy import select
 
-from app.database import SessionLocal
+from app import database
 from app.models.action_log import ActionLog
 from app.models.user_vibe_relation import UserVibeRelation
 from app.models.vibe_tag import VibeTag
@@ -865,7 +910,7 @@ def _effective_vector(db, user_id: int) -> np.ndarray:
 
 def compute_match_score(user_id: int, item_tags: list[tuple[int, float]]) -> int:
     """Cosine similarity × 100, clamped to 0..100. Negative cosine → 0."""
-    db = SessionLocal()
+    db = database.SessionLocal()
     try:
         user_vec = _effective_vector(db, user_id)
     finally:
@@ -887,7 +932,7 @@ def compute_match_score(user_id: int, item_tags: list[tuple[int, float]]) -> int
 
 def _apply_delta(user_id: int, tag_ids: list[int], delta: float,
                  target_column: str, action: str) -> None:
-    db = SessionLocal()
+    db = database.SessionLocal()
     try:
         for tid in tag_ids:
             rel = db.scalar(
@@ -925,7 +970,7 @@ def apply_core_delta(user_id: int, tag_ids: list[int], delta: float,
 
 
 def compute_radar(user_id: int) -> dict:
-    db = SessionLocal()
+    db = database.SessionLocal()
     try:
         tags = db.scalars(select(VibeTag)).all()
         rels = db.scalars(
@@ -992,7 +1037,7 @@ git commit -m "feat(backend): add profile_calc service with match score and rada
 import json
 from datetime import datetime, timedelta
 
-from app.database import SessionLocal
+from app import database
 from app.models.analysis_cache import AnalysisCache
 from app.services import llm_tagger
 from app.services.seed import seed_all
@@ -1022,7 +1067,7 @@ async def test_cache_miss_calls_llm_and_writes_cache():
     assert result["cache_hit"] is False
     assert fake.calls == 1
 
-    db = SessionLocal()
+    db = database.SessionLocal()
     cached = db.query(AnalysisCache).one()
     assert cached.domain == "game"
     db.close()
@@ -1069,14 +1114,14 @@ async def test_json_parse_failure_does_not_write_cache():
     fake = FakeLLM(response="not json at all")
     with pytest.raises(llm_tagger.LlmParseError):
         await llm_tagger.analyze("text", "book", fake)
-    db = SessionLocal()
+    db = database.SessionLocal()
     assert db.query(AnalysisCache).count() == 0
     db.close()
 
 
 async def test_expired_cache_is_ignored():
     seed_all()
-    db = SessionLocal()
+    db = database.SessionLocal()
     db.add(AnalysisCache(
         text_hash=llm_tagger.hash_text("old", "book"),
         domain="book",
@@ -1114,7 +1159,7 @@ import httpx
 from sqlalchemy import select
 
 from app.config import settings
-from app.database import SessionLocal
+from app import database
 from app.models.analysis_cache import AnalysisCache
 from app.models.vibe_tag import VibeTag
 
@@ -1153,7 +1198,7 @@ def hash_text(text: str, domain: str) -> str:
 
 
 def _load_tag_pool() -> list[dict]:
-    db = SessionLocal()
+    db = database.SessionLocal()
     try:
         tags = db.scalars(select(VibeTag).order_by(VibeTag.id)).all()
         return [
@@ -1192,7 +1237,7 @@ async def analyze(text: str, domain: str,
                   llm_call: LlmCallable | None = None) -> dict:
     """Analyze text → {match_tags, summary, text_hash, cache_hit}."""
     llm_call = llm_call or _default_llm_call
-    db = SessionLocal()
+    db = database.SessionLocal()
     try:
         text_hash = hash_text(text, domain)
         cutoff = datetime.utcnow() - timedelta(days=CACHE_TTL_DAYS)
@@ -1425,13 +1470,13 @@ from typing import Generator
 
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app import database
 
 DEFAULT_USER_ID = 1  # V1.0 single-user hardcoded
 
 
 def get_db() -> Generator[Session, None, None]:
-    db = SessionLocal()
+    db = database.SessionLocal()
     try:
         yield db
     finally:
@@ -1466,7 +1511,7 @@ git commit -m "feat(backend): add dependency providers (db session, current user
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from app.database import SessionLocal
+from app import database
 from app.main import app
 from app.models.action_log import ActionLog
 from app.models.user import User
@@ -1478,7 +1523,7 @@ client = TestClient(app)
 
 def _ensure_user():
     seed_all()
-    db = SessionLocal()
+    db = database.SessionLocal()
     if db.scalar(select(User).where(User.id == 1)) is None:
         db.add(User(id=1, username="default"))
         db.commit()
@@ -1506,7 +1551,7 @@ def test_submit_6_valid_tags_initializes_profile():
     assert r.status_code == 200
     assert r.json()["profile_initialized"] is True
 
-    db = SessionLocal()
+    db = database.SessionLocal()
     rels = db.scalars(
         select(UserVibeRelation).where(UserVibeRelation.user_id == 1)
     ).all()
@@ -1545,7 +1590,7 @@ def test_resubmit_returns_already_initialized():
     assert r.json()["already_initialized"] is True
 
     # Weights from the first submit must be preserved
-    db = SessionLocal()
+    db = database.SessionLocal()
     rel = db.scalar(
         select(UserVibeRelation).where(
             UserVibeRelation.user_id == 1,
@@ -1746,7 +1791,7 @@ import json
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from app.database import SessionLocal
+from app import database
 from app.main import app
 from app.models.action_log import ActionLog
 from app.models.user import User
@@ -1758,7 +1803,7 @@ client = TestClient(app)
 
 def _init_profile():
     seed_all()
-    db = SessionLocal()
+    db = database.SessionLocal()
     if db.scalar(select(User).where(User.id == 1)) is None:
         db.add(User(id=1, username="default"))
         db.commit()
@@ -1789,7 +1834,7 @@ def test_analyze_returns_match_score_and_updates_curiosity(monkeypatch):
     assert body["matched_tags"][0]["tag_id"] == 1
     assert body["cache_hit"] is False
 
-    db = SessionLocal()
+    db = database.SessionLocal()
     rel = db.scalar(
         select(UserVibeRelation).where(
             UserVibeRelation.user_id == 1,
@@ -1828,7 +1873,7 @@ def test_action_star_increments_core_weight(monkeypatch):
     assert r.status_code == 200
     assert r.json()["updated_tags"] == 2
 
-    db = SessionLocal()
+    db = database.SessionLocal()
     r2 = db.scalar(
         select(UserVibeRelation).where(
             UserVibeRelation.user_id == 1,
@@ -1846,7 +1891,7 @@ def test_action_bomb_decrements_core_weight(monkeypatch):
     r = client.post("/api/v1/vibe/action",
                     json={"action": "bomb", "matched_tag_ids": [1]})
     assert r.status_code == 200
-    db = SessionLocal()
+    db = database.SessionLocal()
     rel = db.scalar(
         select(UserVibeRelation).where(
             UserVibeRelation.user_id == 1,
@@ -1981,7 +2026,7 @@ git commit -m "feat(backend): add vibe analyze and action routers"
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from app.database import SessionLocal
+from app import database
 from app.main import app
 from app.models.user import User
 from app.services.seed import seed_all
@@ -1991,7 +2036,7 @@ client = TestClient(app)
 
 def _init_profile():
     seed_all()
-    db = SessionLocal()
+    db = database.SessionLocal()
     if db.scalar(select(User).where(User.id == 1)) is None:
         db.add(User(id=1, username="default"))
         db.commit()
