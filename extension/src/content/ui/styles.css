@@ -44,9 +44,20 @@
   color: #6c5ce7;
 }
 
+.vr-roast {
+  font-size: 15px;
+  font-weight: 600;
+  color: #4a3db0;
+  margin: 10px 0 6px;
+  line-height: 1.5;
+  letter-spacing: 0.2px;
+}
+
 .vr-summary {
-  margin: 8px 0 12px;
-  color: #555;
+  margin: 0 0 12px;
+  color: #888;
+  font-size: 11px;
+  font-style: italic;
 }
 
 .vr-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
@@ -191,4 +202,71 @@
   text-align: center;
   background: #fff5f5;
   border: 1px solid rgba(214, 48, 49, 0.2);
+}
+
+.vr-share-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: rgba(108, 92, 231, 0.12);
+  color: #6c5ce7;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.vr-share-btn:hover { background: rgba(108, 92, 231, 0.22); }
+
+.vr-share-dialog {
+  position: absolute;
+  top: 12px;
+  right: 48px;
+  background: #fff;
+  border: 1px solid rgba(108, 92, 231, 0.18);
+  border-radius: 10px;
+  padding: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 10;
+}
+.vr-share-dialog button {
+  padding: 6px 12px;
+  border: none;
+  background: #f0edff;
+  color: #6c5ce7;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.vr-share-dialog button:hover { background: #e4ddff; }
+
+.vr-toast {
+  position: absolute;
+  bottom: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  animation: vr-toast-fade 2s ease;
+}
+@keyframes vr-toast-fade {
+  0%   { opacity: 0; transform: translate(-50%, 4px); }
+  15%  { opacity: 1; transform: translate(-50%, 0); }
+  85%  { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -4px); }
 }

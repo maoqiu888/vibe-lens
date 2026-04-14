@@ -64,6 +64,7 @@ async function onIconClick(text: string, domain: Domain) {
     currentCard = renderVibeCard({
       parent: currentIcon,
       result,
+      sourceDomain: domain,
       onClose: clearUi,
     });
   } catch (e: any) {
