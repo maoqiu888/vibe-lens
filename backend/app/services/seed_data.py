@@ -1,7 +1,6 @@
 """
-Static seed data: 24 Vibe tags (6 categories × 4 tiers) and the 18
-cold-start cards. All data written by hand; do not generate programmatically
-so edits are greppable.
+Static seed data: 24 Vibe tags (6 categories × 4 tiers). All data written
+by hand; do not generate programmatically so edits are greppable.
 """
 
 # (category, tier, id, name, description)
@@ -45,40 +44,6 @@ CATEGORY_LABELS = {
     "world": "世界感",
     "intensity": "情感浓度",
 }
-
-# Taglines and example works for cold-start cards (keyed by tag_id)
-CARD_META = {
-    1:  {"tagline": "像在咖啡馆读一下午",   "examples": ["《小森林》", "《海街日记》"]},
-    2:  {"tagline": "快慢交替的呼吸感",     "examples": ["《请回答1988》", "《这个杀手不太冷》"]},
-    3:  {"tagline": "信息密到不敢眨眼",     "examples": ["《权力的游戏》", "《三体》"]},
-    4:  {"tagline": "心跳过载的爽感",       "examples": ["《疾速追杀》", "《DOOM》"]},
-
-    5:  {"tagline": "被整个世界温柔相待",   "examples": ["《夏目友人帐》", "《星露谷物语》"]},
-    6:  {"tagline": "阳光洒在脸上的轻快",   "examples": ["《歌舞青春》", "《动物森友会》"]},
-    7:  {"tagline": "一个人靠窗发呆的下午", "examples": ["《海边的卡夫卡》", "《Celeste》"]},
-    8:  {"tagline": "吞人的黑暗与寒意",     "examples": ["《沉默的羔羊》", "《血源诅咒》"]},
-
-    9:  {"tagline": "脑子完全下班",         "examples": ["《吃豆人》", "综艺快乐大本营"]},
-    10: {"tagline": "微微动脑但不累",       "examples": ["《纪念碑谷》"]},
-    11: {"tagline": "我要亲手拼出真相",     "examples": ["《锈湖》", "《控制》"]},
-    12: {"tagline": "烧脑到怀疑人生",       "examples": ["《盗梦空间》", "《芬奇堡密室》"]},
-
-    13: {"tagline": "一个字多写都是罪",     "examples": ["海明威短篇", "《东京物语》"]},
-    14: {"tagline": "情绪在细节里爬行",     "examples": ["《包法利夫人》", "《请以你的名字呼唤我》"]},
-    15: {"tagline": "每一帧都在炸你眼球",   "examples": ["《沙丘》", "《赛博朋克2077》"]},
-    16: {"tagline": "叙事像迷宫一样拆开",   "examples": ["《记忆碎片》", "《2666》"]},
-
-    17: {"tagline": "柴米油盐也能写出诗",   "examples": ["《请回答1988》", "《人生复本》"]},
-    18: {"tagline": "魔法与神话的异想",     "examples": ["《哈利波特》", "《塞尔达：旷野之息》"]},
-    19: {"tagline": "霓虹与机械的冷光",     "examples": ["《攻壳机动队》", "《赛博朋克2077》"]},
-    20: {"tagline": "厚重历史的重量",       "examples": ["《活着》", "《刺客信条2》"]},
-
-    21: {"tagline": "像一颗糖心情就甜",     "examples": ["《萌宠成长记》"]},
-    22: {"tagline": "偶尔会在心里点头",     "examples": ["《请回答1988》"]},
-    23: {"tagline": "会被狠狠击中一次",     "examples": ["《你的名字》", "《最后生还者》"]},
-    24: {"tagline": "灼伤灵魂的那种",       "examples": ["《入殓师》", "《蔚蓝》"]},
-}
-
 
 def compute_opposite(tag_id: int) -> int:
     """Within a category: tier 1↔4, tier 2↔3."""
