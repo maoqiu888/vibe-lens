@@ -1,3 +1,4 @@
+import math
 from datetime import datetime
 
 import numpy as np
@@ -5,6 +6,7 @@ from sqlalchemy import select
 
 from app import database
 from app.models.action_log import ActionLog
+from app.models.user import User
 from app.models.user_vibe_relation import UserVibeRelation
 from app.models.vibe_tag import VibeTag
 from app.services.seed_data import CATEGORY_LABELS
@@ -50,6 +52,12 @@ def _apply_delta(user_id: int, tag_ids: list[int], delta: float,
                  target_column: str, action: str) -> None:
     db = database.SessionLocal()
     try:
+        # Lazy-create user row if missing (V1.2: no cold-start pre-creates it)
+        user = db.scalar(select(User).where(User.id == user_id))
+        if user is None:
+            db.add(User(id=user_id, username="default", interaction_count=0))
+            db.flush()
+
         for tid in tag_ids:
             rel = db.scalar(
                 select(UserVibeRelation).where(
@@ -58,7 +66,16 @@ def _apply_delta(user_id: int, tag_ids: list[int], delta: float,
                 )
             )
             if rel is None:
-                continue
+                # Lazy-create with default weights, then apply delta on top
+                rel = UserVibeRelation(
+                    user_id=user_id,
+                    vibe_tag_id=tid,
+                    curiosity_weight=0.0,
+                    core_weight=0.0,
+                )
+                db.add(rel)
+                db.flush()
+
             if target_column == "curiosity":
                 rel.curiosity_weight += delta
             elif target_column == "core":
@@ -145,5 +162,135 @@ def get_top_core_tag_names(user_id: int, n: int = 3) -> list[str]:
         tags = db.scalars(select(VibeTag).where(VibeTag.id.in_(top_ids))).all()
         tag_by_id = {t.id: t.name for t in tags}
         return [tag_by_id[tid] for tid in top_ids if tid in tag_by_id]
+    finally:
+        db.close()
+
+
+# ----------------------------------------------------------------------
+# V1.2 — Level system and dynamic weights
+# ----------------------------------------------------------------------
+
+LEVEL_DATA = {
+    0:  {"title": "陌生人", "emoji": "👤"},
+    1:  {"title": "初遇",   "emoji": "🌱"},
+    2:  {"title": "浅尝",   "emoji": "🌿"},
+    3:  {"title": "识味",   "emoji": "🌳"},
+    4:  {"title": "入门",   "emoji": "🔍"},
+    5:  {"title": "辨识",   "emoji": "🎯"},
+    6:  {"title": "洞察",   "emoji": "🧠"},
+    7:  {"title": "共鸣",   "emoji": "💞"},
+    8:  {"title": "通透",   "emoji": "🔮"},
+    9:  {"title": "灵魂",   "emoji": "👻"},
+    10: {"title": "知己",   "emoji": "💎"},
+}
+
+
+def compute_level(interaction_count: int) -> int:
+    """sqrt-based level curve. L0 is pre-interaction, L10+ keeps climbing."""
+    if interaction_count <= 0:
+        return 0
+    return int(math.sqrt(interaction_count))
+
+
+def level_info(interaction_count: int) -> dict:
+    """Return a dict with level, title, emoji, next_level_at.
+
+    For levels above 10, metadata (title/emoji) is capped at L10's data
+    ("知己" / "💎") but the raw level and next_level_at keep advancing.
+    """
+    level = compute_level(interaction_count)
+    capped = min(level, 10)
+    info = LEVEL_DATA[capped]
+    next_at = (level + 1) ** 2
+    return {
+        "level": level,
+        "title": info["title"],
+        "emoji": info["emoji"],
+        "next_level_at": next_at,
+    }
+
+
+def compute_ui_stage(level: int) -> str:
+    """Map a level to the frontend rendering stage.
+
+    welcome  — L0 (popup pre-interaction)
+    learning — L1-L3 (rate card hides percentage)
+    early    — L4-L5 (percentage visible with level hint)
+    stable   — L6+ (percentage visible, no level hint)
+    """
+    if level <= 0:
+        return "welcome"
+    if level <= 3:
+        return "learning"
+    if level <= 5:
+        return "early"
+    return "stable"
+
+
+CURIOSITY_BASE = 0.5
+
+
+def dynamic_curiosity_delta(hesitation_ms: int | None) -> float:
+    """Scale curiosity delta by hesitation duration.
+
+    <500ms:       0.3× baseline (impulsive)
+    500-2000ms:   1.0× baseline (normal)
+    2000-10000ms: 1.5× baseline (deliberate)
+    >10000ms or invalid: 1.0× baseline (fallback)
+    """
+    if hesitation_ms is None or hesitation_ms < 0 or hesitation_ms > 60000:
+        return CURIOSITY_BASE
+    if hesitation_ms < 500:
+        return CURIOSITY_BASE * 0.3
+    if hesitation_ms < 2000:
+        return CURIOSITY_BASE
+    if hesitation_ms < 10000:
+        return CURIOSITY_BASE * 1.5
+    return CURIOSITY_BASE
+
+
+STAR_BASE = 10.0
+BOMB_BASE = -10.0
+
+
+def dynamic_core_delta(action: str, read_ms: int | None) -> float:
+    """Scale ±10 by read duration on the vibe card.
+
+    <1000ms: 0.5× (reflex)
+    1000-5000ms: 1.0× (normal)
+    5000-30000ms: 1.5× (careful)
+    >30000ms or invalid: 1.0× fallback
+    """
+    base = STAR_BASE if action == "star" else BOMB_BASE
+    if read_ms is None or read_ms < 0 or read_ms > 300000:
+        return base
+    if read_ms < 1000:
+        return base * 0.5
+    if read_ms < 5000:
+        return base
+    if read_ms < 30000:
+        return base * 1.5
+    return base
+
+
+def increment_interaction(user_id: int) -> tuple[int, int, bool]:
+    """Atomically increment user.interaction_count by 1.
+
+    Lazy-creates the user row if missing. Returns (new_count, new_level,
+    level_up) where level_up is True iff the increment crossed a sqrt boundary.
+    """
+    db = database.SessionLocal()
+    try:
+        user = db.scalar(select(User).where(User.id == user_id))
+        if user is None:
+            user = User(id=user_id, username="default", interaction_count=0)
+            db.add(user)
+            db.flush()
+        old_level = compute_level(user.interaction_count)
+        user.interaction_count += 1
+        new_count = user.interaction_count
+        new_level = compute_level(new_count)
+        db.commit()
+        return new_count, new_level, new_level > old_level
     finally:
         db.close()
