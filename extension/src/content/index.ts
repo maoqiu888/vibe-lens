@@ -3,6 +3,7 @@ import { MAX_TEXT_LEN, MIN_TEXT_LEN } from "../shared/constants";
 import type { AnalyzeResult, Domain, Msg } from "../shared/types";
 import { detectDomain } from "./domain";
 import { renderFloatingIcon } from "./ui/FloatingIcon";
+import { playLevelUpAnimation } from "./ui/LevelUpOverlay";
 import { renderVibeCard } from "./ui/VibeCard";
 import INLINE_CSS from "./ui/styles.css?inline";
 
@@ -68,13 +69,32 @@ async function onIconClick(text: string, domain: Domain) {
   try {
     const result = await send<AnalyzeResult>(msg);
     loading.remove();
-    currentCard = renderVibeCard({
-      parent: currentIcon,
-      result,
-      sourceDomain: domain,
-      text,
-      onClose: clearUi,
-    });
+
+    if (result.level_up) {
+      // Play celebration first, then render the real card
+      const tempCard = document.createElement("div");
+      tempCard.className = "vr-card";
+      currentIcon.appendChild(tempCard);
+      playLevelUpAnimation(tempCard, result, () => {
+        tempCard.remove();
+        if (!currentIcon) return;
+        currentCard = renderVibeCard({
+          parent: currentIcon,
+          result,
+          sourceDomain: domain,
+          text,
+          onClose: clearUi,
+        });
+      });
+    } else {
+      currentCard = renderVibeCard({
+        parent: currentIcon,
+        result,
+        sourceDomain: domain,
+        text,
+        onClose: clearUi,
+      });
+    }
   } catch (e: any) {
     loading.className = "vr-card vr-error";
     loading.textContent = e?.message?.startsWith("BACKEND_DOWN")

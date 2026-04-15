@@ -1,5 +1,6 @@
 import { send } from "../../shared/api";
 import type { ActionResult, AnalyzeResult, Domain, Msg } from "../../shared/types";
+import { playLevelUpAnimation } from "./LevelUpOverlay";
 import { renderRecommendCard } from "./RecommendCard";
 import { copyPosterToClipboard, downloadPoster, generatePoster } from "./SharePoster";
 
@@ -179,8 +180,10 @@ function handlePostActionLevelUp(
     setTimeout(onClose, 1500);
     return;
   }
-  // Level-up overlay is wired in Task 9. For now, just close normally.
-  setTimeout(onClose, 1500);
+  // Play level-up overlay on top of the existing vibe card, then close
+  playLevelUpAnimation(card, actionResult, () => {
+    setTimeout(onClose, 400);
+  });
 }
 
 function buildShareDialog(
