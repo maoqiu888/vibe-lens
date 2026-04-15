@@ -1,5 +1,5 @@
 import { send } from "../../shared/api";
-import type { AnalyzeResult, Domain, Msg } from "../../shared/types";
+import type { ActionResult, AnalyzeResult, Domain, Msg } from "../../shared/types";
 import { renderRecommendCard } from "./RecommendCard";
 import { copyPosterToClipboard, downloadPoster, generatePoster } from "./SharePoster";
 
@@ -15,6 +15,7 @@ export function renderVibeCard(props: VibeCardProps): HTMLElement {
   const { parent, result, sourceDomain, text, onClose } = props;
   const card = document.createElement("div");
   card.className = "vr-card";
+  const cardShownAt = performance.now();
 
   // Share button (top-right corner)
   const shareBtn = document.createElement("button");
@@ -34,10 +35,32 @@ export function renderVibeCard(props: VibeCardProps): HTMLElement {
   });
   card.appendChild(shareBtn);
 
-  const score = document.createElement("div");
-  score.className = "vr-score";
-  score.textContent = `${result.match_score}%`;
-  card.appendChild(score);
+  if (result.ui_stage === "learning") {
+    // L1-L3: hide the numeric percentage; show a level badge instead
+    const badge = document.createElement("div");
+    badge.className = "vr-learning-badge";
+    badge.innerHTML = `
+      <div class="vr-learning-emoji">${result.level_emoji}</div>
+      <div class="vr-learning-title">Lv.${result.level} ${result.level_title}</div>
+      <div class="vr-learning-sub">学习中 · 第 ${result.interaction_count} 次</div>
+    `;
+    card.appendChild(badge);
+  } else {
+    // L4+ show the percentage
+    const score = document.createElement("div");
+    score.className = "vr-score";
+    score.textContent = `${result.match_score}%`;
+    card.appendChild(score);
+
+    if (result.ui_stage === "early") {
+      // L4-L5: small level hint below the score
+      const hint = document.createElement("div");
+      hint.className = "vr-level-hint";
+      hint.textContent = `${result.level_emoji} Lv.${result.level} ${result.level_title}`;
+      card.appendChild(hint);
+    }
+    // "stable" (L6+) shows nothing extra
+  }
 
   // Roast is the primary copy; if empty, fall back to showing summary as primary
   const hasRoast = typeof result.roast === "string" && result.roast.trim() !== "";
@@ -79,18 +102,30 @@ export function renderVibeCard(props: VibeCardProps): HTMLElement {
   star.className = "vr-btn star";
   star.textContent = "💎 懂我";
   star.addEventListener("click", async () => {
-    await sendAction("star", result);
-    star.textContent = "✓ 已确权";
-    setTimeout(onClose, 1500);
+    const readMs = Math.max(0, Math.round(performance.now() - cardShownAt));
+    try {
+      const actionResult = await sendAction("star", result, readMs);
+      star.textContent = "✓ 已确权";
+      handlePostActionLevelUp(card, actionResult, onClose);
+    } catch {
+      star.textContent = "提交失败";
+      setTimeout(onClose, 1500);
+    }
   });
 
   const bomb = document.createElement("button");
   bomb.className = "vr-btn bomb";
   bomb.textContent = "💣 踩雷";
   bomb.addEventListener("click", async () => {
-    await sendAction("bomb", result);
-    bomb.textContent = "✓ 已标记";
-    setTimeout(onClose, 1500);
+    const readMs = Math.max(0, Math.round(performance.now() - cardShownAt));
+    try {
+      const actionResult = await sendAction("bomb", result, readMs);
+      bomb.textContent = "✓ 已标记";
+      handlePostActionLevelUp(card, actionResult, onClose);
+    } catch {
+      bomb.textContent = "提交失败";
+      setTimeout(onClose, 1500);
+    }
   });
 
   actions.appendChild(star);
@@ -118,20 +153,34 @@ export function renderVibeCard(props: VibeCardProps): HTMLElement {
   return card;
 }
 
-async function sendAction(action: "star" | "bomb", result: AnalyzeResult) {
+async function sendAction(
+  action: "star" | "bomb",
+  result: AnalyzeResult,
+  readMs: number,
+): Promise<ActionResult> {
   const msg: Msg = {
     type: "ACTION",
     payload: {
       action,
       matchedTagIds: result.matched_tags.map((t) => t.tag_id),
       textHash: result.text_hash,
+      readMs,
     },
   };
-  try {
-    await send(msg);
-  } catch (e) {
-    console.warn("[vibe-radar] action failed", e);
+  return await send<ActionResult>(msg);
+}
+
+function handlePostActionLevelUp(
+  card: HTMLElement,
+  actionResult: ActionResult,
+  onClose: () => void,
+): void {
+  if (!actionResult.level_up) {
+    setTimeout(onClose, 1500);
+    return;
   }
+  // Level-up overlay is wired in Task 9. For now, just close normally.
+  setTimeout(onClose, 1500);
 }
 
 function buildShareDialog(

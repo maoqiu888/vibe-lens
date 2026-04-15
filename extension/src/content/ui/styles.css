@@ -321,3 +321,32 @@
   color: #6c5ce7;
 }
 .vr-reroll:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* V1.2 learning stage — no numeric %, show level badge instead */
+.vr-learning-badge {
+  text-align: center;
+  padding: 16px 8px 8px;
+}
+.vr-learning-emoji {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.vr-learning-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #6c5ce7;
+  margin-bottom: 4px;
+}
+.vr-learning-sub {
+  font-size: 11px;
+  color: #888;
+}
+
+/* V1.2 early stage — small level hint below the percentage */
+.vr-level-hint {
+  font-size: 11px;
+  color: #999;
+  margin-top: -4px;
+  margin-bottom: 8px;
+}
