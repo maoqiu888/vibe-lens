@@ -14,7 +14,8 @@ from app.models.vibe_tag import VibeTag
 CACHE_TTL_DAYS = 7
 NUM_TAGS = 24
 
-LlmCallable = Callable[[str, str, list], Awaitable[str]]
+# Signature: (text, domain, page_title, tag_pool) -> raw JSON string
+LlmCallable = Callable[[str, str, str | None, list], Awaitable[str]]
 
 
 class LlmParseError(Exception):
@@ -25,17 +26,33 @@ class LlmTimeoutError(Exception):
     pass
 
 
-PROMPT_TEMPLATE = """你是一个内容品味分析器。下面给你一段关于【{domain}】的文字描述，
-请从固定的 24 个元标签里选出最匹配的 1-5 个标签，并给每个 0-1 的权重。
-同时用一句话（不超过 30 字）描述这段内容的核心 Vibe。
+PROMPT_TEMPLATE = """你是一个内容品味分析器。用户在一个【{domain}】类型的页面划了一段文字给你。
 
-【标签池】（严格只能从这里选）：
+【页面标题】：{page_title}
+【用户划到的文字】：{text}
+
+你需要做三件事：
+
+1. 从固定的 24 个元标签里选出最匹配的 1-5 个标签，并给每个 0-1 的权重。
+2. 用一句话（不超过 30 字）客观描述这段内容的核心 Vibe。
+3. **最关键：输出一个 item_context 字段**，用你的预训练知识介绍这个物品到底是什么。
+
+【关于 item_context 的详细要求】
+- **必须非空**，绝对不准留空或写"无法确定"
+- 优先级：
+  a) 如果你从【页面标题】或【划到的文字】里**识别出一个真实存在的具体作品**（电影、游戏、书、音乐、专辑等），用你的训练知识写出：作品全名 + 年份 + 创作者 + 一句话真实内容梗概 + 它真正的调性（比如"名字听着压抑但其实幽默乐观"这种反差要明说）
+  b) 如果识别不出具体作品但能推断是什么内容场景（比如一段评论、一段剧情描述），就总结这段文字在讲什么
+  c) 如果连场景都推断不出（比如一句无意义的碎片），就老实说"这看起来只是一小段{domain}评论里的碎片，没能识别到具体作品"
+- **不确信的时候用试探语气**（"看起来像..."、"应该是..."）而不是装成事实
+- 长度 30-120 字，一段大白话
+- 禁止瞎编具体事实（年份、主演、作者）——如果不确定就不提这些细节
+
+【标签池】（你只能在 tag_id 里引用这些 id）：
 {tag_pool_json}
 
-【待分析文字】：
-{text}
+【输出格式】严格 JSON，不要 markdown 代码块：
+{{"tags": [{{"tag_id": 11, "weight": 0.9}}, ...], "summary": "...", "item_context": "..."}}
 
-输出严格 JSON：{{"tags": [{{"tag_id": 11, "weight": 0.9}}, ...], "summary": "..."}}
 不要输出任何解释。"""
 
 
@@ -56,10 +73,16 @@ def _load_tag_pool() -> list[dict]:
         db.close()
 
 
-async def _default_llm_call(text: str, domain: str, tag_pool: list) -> str:
+async def _default_llm_call(
+    text: str,
+    domain: str,
+    page_title: str | None,
+    tag_pool: list,
+) -> str:
     """DeepSeek-compatible chat completion. Replaceable in tests."""
     prompt = PROMPT_TEMPLATE.format(
         domain=domain,
+        page_title=page_title or "（无页面标题）",
         tag_pool_json=json.dumps(tag_pool, ensure_ascii=False),
         text=text,
     )
@@ -80,9 +103,18 @@ async def _default_llm_call(text: str, domain: str, tag_pool: list) -> str:
         raise LlmTimeoutError(str(e)) from e
 
 
-async def analyze(text: str, domain: str,
-                  llm_call: LlmCallable | None = None) -> dict:
-    """Analyze text -> {matched_tags, summary, text_hash, cache_hit}."""
+async def analyze(
+    text: str,
+    domain: str,
+    page_title: str | None = None,
+    llm_call: LlmCallable | None = None,
+) -> dict:
+    """Analyze text → {matched_tags, summary, item_context, text_hash, cache_hit}.
+
+    item_context is a natural-language paragraph the LLM writes using its
+    pretrained knowledge. Never empty. Never falls back. Old cached entries
+    without item_context are treated as cache miss and regenerated.
+    """
     llm_call = llm_call or _default_llm_call
     db = database.SessionLocal()
     try:
@@ -95,22 +127,28 @@ async def analyze(text: str, domain: str,
             )
         )
         if cached is not None:
-            cached.hit_count += 1
-            db.commit()
             parsed = json.loads(cached.tags_json)
-            return {
-                "matched_tags": _enrich_tags(db, parsed["tags"]),
-                "summary": cached.summary,
-                "text_hash": text_hash,
-                "cache_hit": True,
-            }
+            cached_item_context = parsed.get("item_context", "")
+            # V1.3.1: treat old cache entries without item_context as cache miss
+            # so users always get the enriched LLM context.
+            if cached_item_context:
+                cached.hit_count += 1
+                db.commit()
+                return {
+                    "matched_tags": _enrich_tags(db, parsed["tags"]),
+                    "summary": cached.summary,
+                    "item_context": cached_item_context,
+                    "text_hash": text_hash,
+                    "cache_hit": True,
+                }
 
         tag_pool = _load_tag_pool()
-        raw = await llm_call(text, domain, tag_pool)
+        raw = await llm_call(text, domain, page_title, tag_pool)
         try:
             parsed = json.loads(raw)
             raw_tags = parsed["tags"]
             summary = parsed["summary"]
+            item_context = parsed.get("item_context", "")
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             raise LlmParseError(f"invalid LLM response: {e}") from e
 
@@ -122,8 +160,16 @@ async def analyze(text: str, domain: str,
         if not valid:
             raise LlmParseError("all tag_ids out of range")
 
+        # item_context fallback — if LLM ignored instructions and returned empty,
+        # synthesize a minimal one from summary so downstream roaster still gets
+        # something. This honors "no degradation" while staying safe.
+        if not isinstance(item_context, str):
+            item_context = ""
+        item_context = item_context.strip()
+        if not item_context:
+            item_context = f"看起来是{domain}里的一段内容。{summary}"
+
         # Drop any expired entry sharing this hash so the unique index frees up.
-        # Done AFTER validation so a parse/timeout failure does not wipe the row.
         stale = db.scalar(
             select(AnalysisCache).where(AnalysisCache.text_hash == text_hash)
         )
@@ -134,7 +180,10 @@ async def analyze(text: str, domain: str,
         db.add(AnalysisCache(
             text_hash=text_hash,
             domain=domain,
-            tags_json=json.dumps({"tags": valid, "summary": summary}, ensure_ascii=False),
+            tags_json=json.dumps(
+                {"tags": valid, "summary": summary, "item_context": item_context},
+                ensure_ascii=False,
+            ),
             summary=summary,
             hit_count=0,
         ))
@@ -143,6 +192,7 @@ async def analyze(text: str, domain: str,
         return {
             "matched_tags": _enrich_tags(db, valid),
             "summary": summary,
+            "item_context": item_context,
             "text_hash": text_hash,
             "cache_hit": False,
         }

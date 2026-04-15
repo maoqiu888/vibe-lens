@@ -22,9 +22,13 @@ async def analyze(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
-    # 1. Tagger (cache-aware)
+    # 1. Tagger (cache-aware) — pass page_title from request context so the
+    #    LLM can use it as a recognition hint for famous works.
+    page_title = payload.context.page_title if payload.context else None
     try:
-        result = await llm_tagger.analyze(payload.text, payload.domain)
+        result = await llm_tagger.analyze(
+            payload.text, payload.domain, page_title=page_title
+        )
     except llm_tagger.LlmParseError as e:
         raise HTTPException(
             status_code=503,
@@ -66,6 +70,7 @@ async def analyze(
         domain=payload.domain,
         match_score=score,
         user_taste_hint=user_taste_hint,
+        item_context=result["item_context"],
     )
 
     # 5. Apply profile update — first-interaction gets strong core signal,

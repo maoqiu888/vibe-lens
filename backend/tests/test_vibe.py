@@ -45,7 +45,7 @@ def _prime_profile():
 
 
 def _install_fake_llm(monkeypatch, response):
-    async def fake(text, domain, tag_pool):
+    async def fake(text, domain, page_title, tag_pool):
         return response
     from app.services import llm_tagger
     monkeypatch.setattr(llm_tagger, "_default_llm_call", fake)

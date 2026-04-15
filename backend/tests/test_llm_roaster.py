@@ -27,19 +27,21 @@ async def test_generate_roast_happy_path():
         domain="movie",
         match_score=25,
         user_taste_hint="节奏越快越好；爱看发生在日常生活里的故事",
+        item_context="这看起来是一段关于某部慢节奏心理惊悚片的评论",
         llm_call=fake,
     )
     assert result == "快逃！你会睡着。"
     assert fake.calls == 1
 
 
-async def test_user_prompt_contains_text_and_taste_hint():
+async def test_user_prompt_contains_text_taste_hint_and_item_context():
     fake = FakeLLM(response=json.dumps({"roast": "x"}))
     await llm_roaster.generate_roast(
         text="《闪灵》的走廊很压抑",
         domain="movie",
         match_score=72,
         user_taste_hint="爱看机械科幻的冷光调",
+        item_context="《闪灵》是 Stanley Kubrick 的 1980 年心理恐怖片",
         llm_call=fake,
     )
     p = fake.last_prompt
@@ -49,21 +51,23 @@ async def test_user_prompt_contains_text_and_taste_hint():
     assert "电影" in p
     # Natural-language taste hint passed through
     assert "爱看机械科幻的冷光调" in p
+    # item_context passed through
+    assert "Stanley Kubrick" in p
 
 
 async def test_user_prompt_does_not_leak_tag_names():
     """CRITICAL: the roaster must not see any internal tag names.
 
     This test guards against regression — if someone tries to pass tag names
-    through the taste hint or domain, this test will catch it as long as
-    the assertion matches the V1.2 internal 24-tag vocabulary.
+    through the taste hint, item_context, or domain, this test will catch it.
     """
     fake = FakeLLM(response=json.dumps({"roast": "x"}))
     await llm_roaster.generate_roast(
         text="some random text",
         domain="book",
         match_score=50,
-        user_taste_hint="这个人喜欢慢慢读的东西",  # natural language, no tag names
+        user_taste_hint="这个人喜欢慢慢读的东西",
+        item_context="一段读书评论的碎片",
         llm_call=fake,
     )
     p = fake.last_prompt
@@ -96,6 +100,7 @@ async def test_parse_failure_returns_empty_string():
     result = await llm_roaster.generate_roast(
         text="x", domain="movie",
         match_score=50, user_taste_hint="",
+        item_context="some context",
         llm_call=fake,
     )
     assert result == ""
@@ -106,6 +111,7 @@ async def test_llm_exception_returns_empty_string():
     result = await llm_roaster.generate_roast(
         text="x", domain="movie",
         match_score=50, user_taste_hint="",
+        item_context="some context",
         llm_call=fake,
     )
     assert result == ""
@@ -116,6 +122,7 @@ async def test_missing_roast_field_returns_empty_string():
     result = await llm_roaster.generate_roast(
         text="x", domain="movie",
         match_score=50, user_taste_hint="",
+        item_context="some context",
         llm_call=fake,
     )
     assert result == ""
@@ -127,9 +134,25 @@ async def test_empty_taste_hint_still_works():
     result = await llm_roaster.generate_roast(
         text="some text", domain="book",
         match_score=0, user_taste_hint="",
+        item_context="a test item",
         llm_call=fake,
     )
     assert result == "你是一张白纸"
     assert fake.last_prompt is not None
     # Empty hint should degrade to a "new friend" fallback in the prompt
     assert "新朋友" in fake.last_prompt
+
+
+async def test_empty_item_context_gets_fallback_phrase():
+    """If item_context is empty, the prompt still gets a fallback so the
+    user_prompt is always well-formed."""
+    fake = FakeLLM(response=json.dumps({"roast": "ok"}))
+    await llm_roaster.generate_roast(
+        text="x", domain="movie",
+        match_score=50, user_taste_hint="",
+        item_context="",
+        llm_call=fake,
+    )
+    p = fake.last_prompt
+    # Fallback phrase should appear
+    assert "没能识别到" in p or "相关内容" in p
