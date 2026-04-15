@@ -43,7 +43,8 @@ async def test_user_prompt_contains_all_context():
         llm_call=fake,
     )
     p = fake.last_prompt
-    assert "movie" in p
+    # V1.2 prompt localizes domain to Chinese label ("电影" instead of "movie")
+    assert "电影" in p
     assert "《闪灵》" in p
     assert "黑暗压抑" in p
     assert "日常烟火" in p
