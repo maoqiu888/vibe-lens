@@ -1,4 +1,4 @@
-# V1.2 Manual Smoke Test
+# V1.3 Manual Smoke Test
 
 ## Prereqs
 1. Backend venv installed and active
@@ -116,5 +116,77 @@ sqlite3 data/vibe_radar.db "SELECT action, delta FROM action_log ORDER BY id DES
 - As soon as the level-up animation appears, click the × in the top-right corner
 - Expected: the animation immediately fades out and the normal vibe card appears
 
+### 14. Personality quiz on first install (V1.3)
+- After resetting the DB and restarting uvicorn, open the popup
+- Expected: a **Personality Quiz Page** (not Welcome or Radar) with:
+  - Header "Vibe-Radar 快速定位"
+  - Subtitle "告诉我一点关于你的事，让 Vibe 马上懂你"
+  - An MBTI text input (max 4 chars, placeholder "INTP")
+  - A 16personalities.com link below the MBTI input
+  - A 星座 dropdown with 12 options + "—— 不填 ——"
+  - "跳过，让 Vibe 自己学" secondary button (grey/purple)
+  - "确认提交" primary button (purple gradient)
+
+### 15. MBTI submission seeds the profile (V1.3)
+- In the quiz page, type "INTP" in MBTI, select "双鱼座" in 星座, click 确认提交
+- Expected:
+  - Buttons disable, "Vibe 正在理解你…" loading text appears
+  - After 2-5 seconds, a summary paragraph appears (natural language description of INTP+双鱼座)
+  - After 2 more seconds, transitions to the Welcome page
+- Verify the backend state:
+```bash
+cd D:/qhyProject/vibe4.0/backend
+python -c "
+import sqlite3
+con = sqlite3.connect('data/vibe_radar.db')
+cur = con.cursor()
+print('=== user_personality ===')
+for row in cur.execute('SELECT user_id, mbti, constellation, substr(summary, 1, 40) FROM user_personality').fetchall():
+    print(row)
+print('=== personality_seed action_log count ===')
+print(cur.execute(\"SELECT COUNT(*) FROM action_log WHERE action='personality_seed'\").fetchone())
+print('=== seeded user_vibe_relations ===')
+for row in cur.execute('SELECT uvr.vibe_tag_id, vt.name, uvr.core_weight FROM user_vibe_relations uvr JOIN vibe_tags vt ON vt.id = uvr.vibe_tag_id WHERE uvr.user_id=1 AND uvr.core_weight != 0 ORDER BY uvr.core_weight DESC').fetchall():
+    print(row)
+"
+```
+  - Expected: one row in user_personality with mbti='INTP', constellation='双鱼座', summary starting with Chinese text
+  - Expected: personality_seed action_log count is 1-8
+  - Expected: 1-8 user_vibe_relations rows with non-zero core_weight
+
+### 16. Skip path (V1.3)
+- Reset the DB and restart uvicorn
+- Open popup → quiz page → click "跳过，让 Vibe 自己学"
+- Expected: "✓ 已完成，进入主界面…" message, then transition to Welcome page
+- Verify the DB:
+```bash
+python -c "
+import sqlite3
+con = sqlite3.connect('data/vibe_radar.db')
+cur = con.cursor()
+for row in cur.execute('SELECT user_id, mbti, constellation, summary FROM user_personality').fetchall():
+    print(row)
+"
+```
+  - Expected: one row with (1, None, None, None)
+- Close popup and reopen → should show Welcome page (not the quiz again)
+- This confirms the row-write-on-skip prevents re-prompting
+
+### 17. Button rename + tag pill removal + onboarding hint (V1.3)
+- With MBTI already submitted (from step 15), go to a supported site
+- Highlight text → click purple icon → vibe card appears
+- Expected (first time after install):
+  - Buttons read "❤️ 我喜欢" and "👎 我不喜欢" — NOT "💎 懂我" / "💣 踩雷"
+  - NO tag pills under the roast line (V1.2 used to show "赛博机械" / "黑暗压抑" pills — these should be GONE)
+  - A small grey hint under the action row: "点这两个按钮，让 Vibe 越来越懂你 · 点得越多越准"
+- Close the card, highlight different text, click icon again
+- Expected: the onboarding hint does NOT appear this time (it was stored in chrome.storage.local and dismissed)
+
+### 18. Roaster voice uses personality summary (V1.3)
+- With MBTI=INTP submitted, highlight several different texts on different supported sites
+- Expected: each roaster output reads like a friend talking about you, referencing the vibe of the text, not mechanical tag recitation
+- The roast should NEVER contain the 24 internal tag names (慢炖沉浸 / 治愈温暖 / 赛博机械 / 黑暗压抑 / 烧脑解谜 / 认知挑战 / etc.)
+- Some outputs should reference INTP-style insights like "深度思考", "独处", "逻辑", even though the word "INTP" itself never appears in the output
+
 ## Pass criteria
-All 13 steps complete without any JavaScript console errors in either the background worker or the content script.
+All 18 steps complete without any JavaScript console errors in either the background worker or the content script.
