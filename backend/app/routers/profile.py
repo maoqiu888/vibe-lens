@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.deps import get_current_user_id, get_db
 from app.models.action_log import ActionLog
 from app.models.user import User
+from app.models.user_personality import UserPersonality
 from app.schemas.profile import RadarResponse
 from app.services import profile_calc
 
@@ -31,6 +32,11 @@ def radar(
 
     info = profile_calc.level_info(interaction_count)
     ui_stage = profile_calc.compute_ui_stage(info["level"])
+
+    personality_row = db.scalar(
+        select(UserPersonality).where(UserPersonality.user_id == user_id)
+    )
+    has_personality = personality_row is not None
 
     # For zero-interaction users (welcome state), we return an empty radar
     # structure instead of calling compute_radar (which would KeyError on
@@ -67,6 +73,7 @@ def radar(
         level_emoji=info["emoji"],
         next_level_at=info["next_level_at"],
         ui_stage=ui_stage,
+        has_personality=has_personality,
         dimensions=dimensions,
         total_analyze_count=total_analyze,
         total_action_count=total_action,

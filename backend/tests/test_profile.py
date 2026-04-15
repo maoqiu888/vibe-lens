@@ -4,6 +4,7 @@ from sqlalchemy import select
 from app import database
 from app.main import app
 from app.models.user import User
+from app.models.user_personality import UserPersonality
 from app.models.user_vibe_relation import UserVibeRelation
 from app.services.seed import seed_all
 
@@ -71,3 +72,24 @@ def test_radar_returns_level_fields_for_welcome_stage():
     assert body["level_emoji"] == "👤"
     assert body["next_level_at"] == 1
     assert len(body["dimensions"]) == 6  # empty dimensions still returned
+
+
+def test_radar_response_includes_has_personality_flag():
+    """The radar endpoint must expose has_personality so frontend can decide
+    whether to show the quiz page, welcome page, or radar page."""
+    seed_all()
+
+    # Brand-new user — no personality row
+    r = client.get("/api/v1/profile/radar")
+    body = r.json()
+    assert body["has_personality"] is False
+
+    # Submit personality (skip path: both null)
+    client.post("/api/v1/personality/submit", json={
+        "mbti": None, "constellation": None,
+    })
+
+    # Now the flag flips
+    r2 = client.get("/api/v1/profile/radar")
+    body2 = r2.json()
+    assert body2["has_personality"] is True

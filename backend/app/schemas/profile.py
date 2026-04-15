@@ -21,6 +21,7 @@ class RadarResponse(BaseModel):
     level_emoji: str
     next_level_at: int
     ui_stage: str
+    has_personality: bool
     dimensions: list[RadarDimension]
     total_analyze_count: int
     total_action_count: int
