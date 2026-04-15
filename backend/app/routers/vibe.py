@@ -46,13 +46,18 @@ async def analyze(
     # 3. Match score (may be 0 for first-time on empty vector — frontend hides it)
     score = profile_calc.compute_match_score(user_id=user_id, item_tags=item_tags)
 
-    # 4. Roast (unchanged from V1.1)
-    user_top_tag_names = profile_calc.get_top_core_tag_names(user_id=user_id, n=3)
+    # 4. Roast — pass ONLY match_score + natural-language taste hint.
+    #    We deliberately do NOT pass tag names to the roaster so the LLM
+    #    physically cannot leak internal vocabulary into its output.
+    user_taste_descriptions = profile_calc.get_top_core_tag_descriptions(
+        user_id=user_id, n=2
+    )
+    user_taste_hint = "；".join(user_taste_descriptions)
     roast = await llm_roaster.generate_roast(
         text=payload.text,
         domain=payload.domain,
-        item_tag_names=matched_tag_names,
-        user_top_tag_names=user_top_tag_names,
+        match_score=score,
+        user_taste_hint=user_taste_hint,
     )
 
     # 5. Apply profile update — first-interaction gets strong core signal,
