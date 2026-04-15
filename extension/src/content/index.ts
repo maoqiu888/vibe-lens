@@ -9,6 +9,7 @@ import INLINE_CSS from "./ui/styles.css?inline";
 let shadowRoot: ShadowRoot | null = null;
 let currentIcon: HTMLElement | null = null;
 let currentCard: HTMLElement | null = null;
+let iconShownAt: number | null = null;
 
 function ensureShadow(): ShadowRoot {
   if (shadowRoot) return shadowRoot;
@@ -29,6 +30,7 @@ function clearUi() {
   currentIcon = null;
   currentCard?.remove();
   currentCard = null;
+  iconShownAt = null;
 }
 
 async function onIconClick(text: string, domain: Domain) {
@@ -48,6 +50,10 @@ async function onIconClick(text: string, domain: Domain) {
   `;
   currentIcon.appendChild(loading);
 
+  const hesitationMs = iconShownAt !== null
+    ? Math.max(0, Math.round(performance.now() - iconShownAt))
+    : null;
+
   const msg: Msg = {
     type: "ANALYZE",
     payload: {
@@ -55,6 +61,7 @@ async function onIconClick(text: string, domain: Domain) {
       domain,
       pageTitle: document.title,
       pageUrl: location.href,
+      hesitationMs,
     },
   };
 
@@ -99,6 +106,7 @@ document.addEventListener("mouseup", (e) => {
     y: rect.top + window.scrollY,
     onClick: () => onIconClick(text, domain),
   });
+  iconShownAt = performance.now();
 });
 
 document.addEventListener("keydown", (e) => {
