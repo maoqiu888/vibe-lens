@@ -42,14 +42,18 @@ def radar(
         data = profile_calc.compute_radar(user_id=user_id)
         dimensions = data["dimensions"]
 
+    # Count distinct call events (not per-tag rows). ActionLog has one row
+    # per matched tag, so each analyze/star call produces multiple rows all
+    # sharing near-identical created_at timestamps. Group by second-truncated
+    # timestamp to recover the true call count.
     total_analyze = db.scalar(
-        select(func.count(ActionLog.id)).where(
+        select(func.count(func.distinct(func.strftime("%Y-%m-%d %H:%M:%S", ActionLog.created_at)))).where(
             ActionLog.user_id == user_id,
             ActionLog.action == "analyze",
         )
     ) or 0
     total_action = db.scalar(
-        select(func.count(ActionLog.id)).where(
+        select(func.count(func.distinct(func.strftime("%Y-%m-%d %H:%M:%S", ActionLog.created_at)))).where(
             ActionLog.user_id == user_id,
             ActionLog.action.in_(["star", "bomb"]),
         )
