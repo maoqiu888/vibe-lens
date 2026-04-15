@@ -42,6 +42,7 @@ def test_tables_are_created_and_basic_crud_works():
     db.commit()
 
     assert db.scalar(select(User).where(User.id == 1)).username == "default"
+    assert db.scalar(select(User).where(User.id == 1)).interaction_count == 0
     assert db.scalar(select(VibeTag).where(VibeTag.id == 1)).opposite_id == 4
     assert db.scalar(select(UserVibeRelation)).core_weight == 15.0
     assert db.scalar(select(AnalysisCache)).text_hash == "abc"
