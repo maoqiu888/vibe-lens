@@ -53,6 +53,11 @@ async function routeApi(msg: Msg): Promise<unknown> {
         source_domain: msg.payload.sourceDomain,
         matched_tag_ids: msg.payload.matchedTagIds,
       });
+    case "PERSONALITY_SUBMIT":
+      return fetchJson("POST", "/personality/submit", {
+        mbti: msg.payload.mbti,
+        constellation: msg.payload.constellation,
+      });
   }
 }
 
