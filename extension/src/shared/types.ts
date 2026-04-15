@@ -13,30 +13,24 @@ export interface AnalyzeResult {
   matched_tags: MatchedTag[];
   text_hash: string;
   cache_hit: boolean;
+  interaction_count: number;
+  level: number;
+  level_title: string;
+  level_emoji: string;
+  next_level_at: number;
+  level_up: boolean;
+  ui_stage: "welcome" | "learning" | "early" | "stable";
 }
 
-export interface CardOption {
-  tag_id: number;
-  name: string;
-  tier: number;
-  tagline: string;
-  examples: string[];
-}
-
-export interface CategoryCard {
-  category: string;
-  category_label: string;
-  options: CardOption[];
-}
-
-export interface ColdStartCardsResult {
-  cards: CategoryCard[];
-}
-
-export interface ColdStartSubmitResult {
+export interface ActionResult {
   status: string;
-  profile_initialized: boolean;
-  already_initialized?: boolean;
+  updated_tags: number;
+  interaction_count: number;
+  level: number;
+  level_title: string;
+  level_emoji: string;
+  next_level_at: number;
+  level_up: boolean;
 }
 
 export interface RadarDimension {
@@ -48,6 +42,12 @@ export interface RadarDimension {
 
 export interface RadarResult {
   user_id: number;
+  interaction_count: number;
+  level: number;
+  level_title: string;
+  level_emoji: string;
+  next_level_at: number;
+  ui_stage: "welcome" | "learning" | "early" | "stable";
   dimensions: RadarDimension[];
   total_analyze_count: number;
   total_action_count: number;
@@ -64,10 +64,8 @@ export interface RecommendResult {
 }
 
 export type Msg =
-  | { type: "ANALYZE"; payload: { text: string; domain: Domain; pageTitle: string; pageUrl: string } }
-  | { type: "ACTION"; payload: { action: "star" | "bomb"; matchedTagIds: number[]; textHash?: string } }
-  | { type: "COLD_START_GET_CARDS" }
-  | { type: "COLD_START_SUBMIT"; payload: { selectedTagIds: number[] } }
+  | { type: "ANALYZE"; payload: { text: string; domain: Domain; pageTitle: string; pageUrl: string; hesitationMs: number | null } }
+  | { type: "ACTION"; payload: { action: "star" | "bomb"; matchedTagIds: number[]; textHash?: string; readMs: number | null } }
   | { type: "GET_RADAR" }
   | { type: "RECOMMEND"; payload: { text: string; sourceDomain: Domain; matchedTagIds: number[] } };
 

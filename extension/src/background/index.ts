@@ -28,12 +28,6 @@ async function fetchJson<T>(method: "GET" | "POST", path: string, body?: unknown
 
 async function routeApi(msg: Msg): Promise<unknown> {
   switch (msg.type) {
-    case "COLD_START_GET_CARDS":
-      return fetchJson("GET", "/cold-start/cards");
-    case "COLD_START_SUBMIT":
-      return fetchJson("POST", "/cold-start/submit", {
-        selected_tag_ids: msg.payload.selectedTagIds,
-      });
     case "ANALYZE":
       return fetchJson("POST", "/vibe/analyze", {
         text: msg.payload.text,
@@ -42,12 +36,14 @@ async function routeApi(msg: Msg): Promise<unknown> {
           page_title: msg.payload.pageTitle,
           page_url: msg.payload.pageUrl,
         },
+        hesitation_ms: msg.payload.hesitationMs,
       });
     case "ACTION":
       return fetchJson("POST", "/vibe/action", {
         action: msg.payload.action,
         matched_tag_ids: msg.payload.matchedTagIds,
         text_hash: msg.payload.textHash,
+        read_ms: msg.payload.readMs,
       });
     case "GET_RADAR":
       return fetchJson("GET", "/profile/radar");
