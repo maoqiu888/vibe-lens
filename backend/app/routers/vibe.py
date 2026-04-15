@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.deps import get_current_user_id, get_db
 from app.models.user import User
+from app.models.user_personality import UserPersonality
 from app.models.vibe_tag import VibeTag
 from app.schemas.action import ActionRequest, ActionResponse
 from app.schemas.analyze import AnalyzeRequest, AnalyzeResponse, MatchedTag
@@ -46,13 +47,20 @@ async def analyze(
     # 3. Match score (may be 0 for first-time on empty vector — frontend hides it)
     score = profile_calc.compute_match_score(user_id=user_id, item_tags=item_tags)
 
-    # 4. Roast — pass ONLY match_score + natural-language taste hint.
-    #    We deliberately do NOT pass tag names to the roaster so the LLM
-    #    physically cannot leak internal vocabulary into its output.
-    user_taste_descriptions = profile_calc.get_top_core_tag_descriptions(
-        user_id=user_id, n=2
+    # 4. Roast — prefer MBTI-derived personality summary if present, else
+    #    fall back to V1.2's top-tag descriptions. Either way, the roaster
+    #    never sees tag names — only natural language.
+    user_personality = db.scalar(
+        select(UserPersonality).where(UserPersonality.user_id == user_id)
     )
-    user_taste_hint = "；".join(user_taste_descriptions)
+    if user_personality and user_personality.summary:
+        user_taste_hint = user_personality.summary
+    else:
+        user_taste_descriptions = profile_calc.get_top_core_tag_descriptions(
+            user_id=user_id, n=2
+        )
+        user_taste_hint = "；".join(user_taste_descriptions)
+
     roast = await llm_roaster.generate_roast(
         text=payload.text,
         domain=payload.domain,

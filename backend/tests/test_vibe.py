@@ -8,6 +8,7 @@ from app import database
 from app.main import app
 from app.models.action_log import ActionLog
 from app.models.user import User
+from app.models.user_personality import UserPersonality
 from app.models.user_vibe_relation import UserVibeRelation
 from app.services.seed import seed_all
 
@@ -411,3 +412,102 @@ def test_action_response_carries_level_fields(monkeypatch):
     assert body["level_up"] is False
     assert body["level_title"] == "初遇"
     assert "next_level_at" in body
+
+
+def test_analyze_uses_personality_summary_as_taste_hint(monkeypatch):
+    """When user has a personality summary, roaster gets it as taste_hint."""
+    seed_all()
+
+    db = database.SessionLocal()
+    db.add(User(id=1, username="default", interaction_count=0))
+    db.commit()
+    db.add(UserPersonality(
+        user_id=1,
+        mbti="INTP",
+        constellation="双鱼座",
+        summary="这个朋友是典型的深度思考者，逻辑敏锐但情感其实柔软。",
+    ))
+    db.commit()
+    db.close()
+
+    _install_fake_llm(monkeypatch, json.dumps({
+        "tags": [{"tag_id": 1, "weight": 0.9}], "summary": "slow"
+    }))
+
+    captured_hint = {}
+
+    async def capture_roaster(system_prompt, user_prompt):
+        captured_hint["prompt"] = user_prompt
+        return json.dumps({"roast": "test roast"})
+
+    from app.services import llm_roaster
+    monkeypatch.setattr(llm_roaster, "_default_llm_call", capture_roaster)
+
+    client.post("/api/v1/vibe/analyze",
+                json={"text": "some text", "domain": "book"})
+
+    assert "深度思考者" in captured_hint["prompt"]
+
+
+def test_analyze_falls_back_to_tag_descriptions_without_personality(monkeypatch):
+    """When user has no personality row, roaster uses V1.2 tag description fallback."""
+    seed_all()
+    db = database.SessionLocal()
+    db.add(User(id=1, username="default", interaction_count=1))
+    db.commit()
+    db.add(UserVibeRelation(
+        user_id=1, vibe_tag_id=1,  # 慢炖沉浸 → description "节奏极慢，像咖啡馆读一下午般从容铺陈"
+        curiosity_weight=0.0, core_weight=20.0,
+    ))
+    db.commit()
+    db.close()
+
+    _install_fake_llm(monkeypatch, json.dumps({
+        "tags": [{"tag_id": 2, "weight": 0.9}], "summary": "slow"
+    }))
+
+    captured_hint = {}
+
+    async def capture_roaster(system_prompt, user_prompt):
+        captured_hint["prompt"] = user_prompt
+        return json.dumps({"roast": "test roast"})
+
+    from app.services import llm_roaster
+    monkeypatch.setattr(llm_roaster, "_default_llm_call", capture_roaster)
+
+    client.post("/api/v1/vibe/analyze",
+                json={"text": "some text", "domain": "book"})
+
+    # The fallback description for 慢炖沉浸 starts with "节奏极慢"
+    assert "节奏极慢" in captured_hint["prompt"]
+    # And the MBTI path was NOT used
+    assert "深度思考者" not in captured_hint["prompt"]
+
+
+def test_personality_seeds_drive_initial_match_score(monkeypatch):
+    """A user with personality seeds gets non-zero match score on first analyze."""
+    seed_all()
+    db = database.SessionLocal()
+    db.add(User(id=1, username="default", interaction_count=0))
+    db.commit()
+    db.add(UserPersonality(
+        user_id=1, mbti="INTP", constellation=None,
+        summary="一段自然语言描述。" * 5,
+    ))
+    # Manually apply a tag_seed as if personality agent had done it
+    db.add(UserVibeRelation(
+        user_id=1, vibe_tag_id=11,  # 烧脑解谜
+        curiosity_weight=0.0, core_weight=15.0,
+    ))
+    db.commit()
+    db.close()
+
+    _install_fake_llm(monkeypatch, json.dumps({
+        "tags": [{"tag_id": 11, "weight": 1.0}], "summary": "brainy"
+    }))
+    _install_fake_roaster(monkeypatch, "test roast")
+
+    r = client.post("/api/v1/vibe/analyze",
+                    json={"text": "烧脑的作品", "domain": "book"})
+    body = r.json()
+    assert body["match_score"] > 0
