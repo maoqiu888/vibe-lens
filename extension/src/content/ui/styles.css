@@ -439,3 +439,15 @@
   line-height: 1;
 }
 .vr-levelup-skip:hover { background: rgba(255, 255, 255, 0.3); }
+
+/* V1.3 first-time onboarding hint under the action buttons */
+.vr-onboarding-hint {
+  margin-top: 8px;
+  font-size: 10px;
+  color: #999;
+  text-align: center;
+  line-height: 1.5;
+  padding: 4px 8px;
+  background: rgba(108, 92, 231, 0.04);
+  border-radius: 6px;
+}

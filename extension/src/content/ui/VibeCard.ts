@@ -86,22 +86,12 @@ export function renderVibeCard(props: VibeCardProps): HTMLElement {
     card.appendChild(roastFallback);
   }
 
-  const tagsWrap = document.createElement("div");
-  tagsWrap.className = "vr-tags";
-  for (const t of result.matched_tags) {
-    const pill = document.createElement("span");
-    pill.className = "vr-tag";
-    pill.textContent = t.name;
-    tagsWrap.appendChild(pill);
-  }
-  card.appendChild(tagsWrap);
-
   const actions = document.createElement("div");
   actions.className = "vr-actions";
 
   const star = document.createElement("button");
   star.className = "vr-btn star";
-  star.textContent = "💎 懂我";
+  star.textContent = "❤️ 我喜欢";
   star.addEventListener("click", async () => {
     const readMs = Math.max(0, Math.round(performance.now() - cardShownAt));
     try {
@@ -116,7 +106,7 @@ export function renderVibeCard(props: VibeCardProps): HTMLElement {
 
   const bomb = document.createElement("button");
   bomb.className = "vr-btn bomb";
-  bomb.textContent = "💣 踩雷";
+  bomb.textContent = "👎 我不喜欢";
   bomb.addEventListener("click", async () => {
     const readMs = Math.max(0, Math.round(performance.now() - cardShownAt));
     try {
@@ -132,6 +122,17 @@ export function renderVibeCard(props: VibeCardProps): HTMLElement {
   actions.appendChild(star);
   actions.appendChild(bomb);
   card.appendChild(actions);
+
+  // V1.3: first-time onboarding hint under the action row.
+  chrome.storage.local.get("has_seen_onboarding").then((stored) => {
+    if (!stored.has_seen_onboarding) {
+      const hint = document.createElement("div");
+      hint.className = "vr-onboarding-hint";
+      hint.textContent = "点这两个按钮，让 Vibe 越来越懂你 · 点得越多越准";
+      card.appendChild(hint);
+      chrome.storage.local.set({ has_seen_onboarding: true });
+    }
+  });
 
   // Recommend link (lazy trigger at the very bottom)
   const recommendLink = document.createElement("a");
