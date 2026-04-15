@@ -67,3 +67,82 @@ h2 { margin: 0 0 12px; font-size: 18px; color: #6c5ce7; }
 }
 
 .error { color: #d63031; padding: 12px; }
+
+/* V1.2 welcome page */
+.vr-welcome {
+  text-align: center;
+  padding: 20px 10px;
+}
+.vr-welcome-logo {
+  font-size: 40px;
+  color: #6c5ce7;
+  margin-bottom: 8px;
+  letter-spacing: 8px;
+}
+.vr-welcome h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  color: #6c5ce7;
+}
+.vr-welcome-tagline {
+  color: #888;
+  font-size: 13px;
+  margin: 0 0 16px;
+}
+.vr-welcome-hint {
+  color: #555;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0 0 14px;
+}
+.vr-welcome-sites {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.vr-welcome-sites li {
+  padding: 8px 12px;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #555;
+  border: 1px solid rgba(108, 92, 231, 0.1);
+}
+
+/* V1.2 level panel in radar view */
+.vr-level-panel {
+  margin: 12px 0 8px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid rgba(108, 92, 231, 0.12);
+}
+.vr-level-current {
+  font-size: 16px;
+  font-weight: 700;
+  color: #6c5ce7;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.vr-level-bar {
+  width: 100%;
+  height: 8px;
+  background: #f0edff;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.vr-level-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6c5ce7, #a29bfe);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.vr-level-counts {
+  font-size: 11px;
+  color: #888;
+  text-align: center;
+}

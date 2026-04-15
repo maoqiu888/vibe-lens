@@ -1,24 +1,25 @@
 import * as echarts from "echarts";
 
-import { send } from "../shared/api";
 import type { RadarResult } from "../shared/types";
 
-export async function renderRadar(root: HTMLElement) {
+export async function renderRadar(root: HTMLElement, data: RadarResult): Promise<void> {
   root.innerHTML = `
     <h2>你的审美雷达</h2>
     <div id="radar"></div>
-    <div class="stats" id="stats"></div>
+    <div class="vr-level-panel">
+      <div class="vr-level-current">${data.level_emoji} Lv.${data.level} ${data.level_title}</div>
+      <div class="vr-level-bar">
+        <div class="vr-level-fill" style="width: ${levelFillPercent(data)}%"></div>
+      </div>
+      <div class="vr-level-counts">
+        已喂入 <b>${data.interaction_count}</b> 个信号 · 下一级还差 <b>${Math.max(0, data.next_level_at - data.interaction_count)}</b> 次
+      </div>
+    </div>
+    <div class="stats">
+      已鉴定 <b>${data.total_analyze_count}</b> 次 · 已确权 <b>${data.total_action_count}</b> 次
+    </div>
   `;
   const chartRoot = root.querySelector("#radar") as HTMLElement;
-  const statsRoot = root.querySelector("#stats") as HTMLElement;
-
-  let data: RadarResult;
-  try {
-    data = await send<RadarResult>({ type: "GET_RADAR" });
-  } catch (e: any) {
-    chartRoot.innerHTML = `<div class="error">加载失败: ${e?.message ?? "未知"}</div>`;
-    return;
-  }
 
   const chart = echarts.init(chartRoot);
   chart.setOption({
@@ -46,9 +47,13 @@ export async function renderRadar(root: HTMLElement) {
       },
     ],
   });
+}
 
-  statsRoot.innerHTML = `
-    已鉴定 <b>${data.total_analyze_count}</b> 次 ·
-    已确权 <b>${data.total_action_count}</b> 次
-  `;
+function levelFillPercent(data: RadarResult): number {
+  if (data.next_level_at <= 0) return 100;
+  const prev = data.level * data.level;
+  const span = data.next_level_at - prev;
+  if (span <= 0) return 100;
+  const progressed = data.interaction_count - prev;
+  return Math.min(100, Math.max(0, Math.round((progressed / span) * 100)));
 }

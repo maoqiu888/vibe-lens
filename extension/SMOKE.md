@@ -1,74 +1,120 @@
-# V1.0 Manual Smoke Test
+# V1.2 Manual Smoke Test
 
 ## Prereqs
-1. Backend running: `cd backend && uvicorn app.main:app --reload --port 8000`
-2. Extension built: `cd extension && npm run build`
-3. Extension loaded in Chrome via `chrome://extensions` → Load unpacked → `extension/build/`
-4. `backend/.env` configured with a real LLM API key (needed for steps 3-10; V1.1 adds roast + recommendation calls that also hit the LLM)
+1. Backend venv installed and active
+2. `backend/.env` configured with a real LLM API key (needed for most steps; V1.1 added roast + recommendation calls, V1.2 is mostly backend-internal but still uses roast)
+3. Chrome with developer mode enabled
+
+## Step 0: Reset database (V1.2 required, one-time)
+V1.2 changed the `users` table schema (added `interaction_count`). You MUST delete the old DB and re-seed before any smoke step:
+```bash
+cd D:/qhyProject/vibe4.0/backend
+rm data/vibe_radar.db
+source .venv/Scripts/activate
+python -m app.services.seed
+```
+This rebuilds the schema and reinserts the 24 vibe tags. `user_id=1` will be lazy-created on first analyze.
+
+## Start services
+```bash
+cd D:/qhyProject/vibe4.0/backend
+source .venv/Scripts/activate
+uvicorn app.main:app --reload --port 8000
+```
+
+```bash
+cd D:/qhyProject/vibe4.0/extension
+npm run build
+```
+
+Chrome → `chrome://extensions` → Developer mode → Load unpacked → `extension/build/`
+
+---
 
 ## Steps
 
-### 1. Cold start
-- Click extension icon → popup shows 18 cards (6 categories × 3 each)
-- Click one card per category → bottom button reads "开始鉴定" and becomes purple
-- Click → popup switches to radar chart view
-- Expected: 6-axis radar, 4 categories at ~0, 6 categories at ~42 (one tier-1 each, core_weight=15)
+### 1. Welcome page (V1.2)
+- Click the extension icon → popup opens
+- Expected: you see a **welcome page** (no 18 cards, no radar) with logo, tagline "我会通过你的真实行为认识你", and a 4-item grid of supported sites
+- Close the popup
 
-### 2. Popup reopens to radar
-- Close popup, reopen → goes directly to radar view (not cold-start)
-- `chrome.storage.local.profile_initialized` should be `true`
-
-### 3. Highlight-to-analyze — basic
+### 2. First-interaction cold start (V1.2)
 - Go to `https://book.douban.com/subject/1000000/` (any Douban book)
-- Highlight 2-10 Chinese characters in any review
-- Expected: a round purple icon appears at the top-right of the selection
-- Click the icon → rounded card appears below with:
-  - Large match score percentage
-  - One-line AI summary
-  - Purple pill-shaped tags
-  - 💎 懂我 / 💣 踩雷 buttons
+- Highlight 2-10 Chinese characters
+- Click the purple icon
+- Expected: a **level-up animation** plays for ~1.5 seconds showing:
+  - Old emoji (👤) floating up and fading
+  - Arrows (↓ ↓ ↓)
+  - New emoji (🌱) popping in at larger size
+  - Title "Lv.1 初遇"
+  - Subtitle "🎉 你已经喂了 1 个信号"
+- After the animation, the vibe card renders with:
+  - **No percentage number** (learning stage)
+  - A **learning badge** showing "🌱 Lv.1 初遇" + "学习中 · 第 1 次"
+  - Normal roast text
+  - Normal tags
+  - Normal 💎/💣 buttons
 
-### 4. Star/Bomb flow
-- Click 💎 → button text becomes "✓ 已确权" → card fades after 1.5s
-- Open popup → radar values should have shifted (same-tag categories +10)
+### 3. Popup reopens with radar + level panel (V1.2)
+- Open the popup again
+- Expected: no longer shows welcome — instead shows a sparse radar chart (mostly zero values — you only had one interaction) AND a level panel at the bottom with:
+  - "🌱 Lv.1 初遇"
+  - A progress bar (mostly empty — 0/3 until L2)
+  - "已喂入 1 个信号 · 下一级还差 3 次"
 
-### 5. Cache hit
-- Highlight the exact same text a second time → click icon again
-- Check background service worker console: should log `cache_hit: true` (visible in network response)
-- Observably, response arrives faster than the first call
+### 4. Highlight 3 more times → Lv.2 level-up (V1.2)
+- Go back to a supported site, highlight and rate 3 more times
+- On the 4th rate, expected: a new level-up animation plays showing L1→L2 transition, emoji 🌿, title "浅尝"
+- After the animation, vibe card still shows no percentage (L2 is still "learning" stage)
 
-### 6. Backend-down handling
+### 5. Continue to count 16 → unlock percentage display (V1.2)
+- Continue highlighting and rating until `interaction_count == 16`
+- On the 16th rate, expected: level-up animation shows L3→L4 transition, emoji 🔍, title "入门"
+- After the animation, vibe card now SHOWS the percentage number + a small "🔍 Lv.4 入门" hint below it. This is the first level where the match score is visible.
+
+### 6. Highlight-to-analyze cache hit (from V1.1)
+- Highlight the exact same text a second time → click icon
+- Expected: cache_hit is true in the background worker log, response arrives faster
+
+### 7. Backend-down handling (from V1.0)
 - Stop uvicorn
 - Highlight text → click icon
-- Expected: card shows "后端未运行，请先启动 FastAPI" and disappears after 3s
+- Expected: error card shows "后端未运行，请先启动 FastAPI", disappears after 3s
 
-### 7. Out-of-whitelist sites
-- Go to `https://www.baidu.com/`
-- Highlight any text
-- Expected: no icon appears (content script not injected)
+### 8. Roast display (from V1.1)
+- After rating something, expected: bold purple roast line is prominent, grey italic summary below
 
-### 8. Roast display (V1.1)
-- Highlight text on 豆瓣电影 → click icon → wait for rate card
-- Expected: a **bold purple roast line** appears as the prominent copy (30-50 chars)
-- Below the roast, an **italic grey summary** (smaller) is still visible
-- The roast should reference the current domain's metaphor (影院睡着 / 摔手柄 / 翻不过30页 / 塞满棉花)
-- If roast cannot generate (backend glitch), the grey summary should promote to primary styling instead — never show an empty card
+### 9. Cross-domain recommendation (from V1.1)
+- Click "> 寻找同频代餐" link → 3 items with distinct domain emoji appear, none from source domain
+- Click "换一批 ↻" → new items appear
 
-### 9. Cross-domain recommendation (V1.1)
-- Rate something → click the small grey "> 寻找同频代餐" link at the bottom of the card
-- Expected: the link disappears, a sub-card appears below with a "代餐官思考中…" placeholder
-- After ~2-5 seconds, 3 items appear, each with a distinct domain emoji (📚🎬🎮🎵)
-- **None of the 3 items must be from the source domain** — on `movie.douban.com`, zero 🎬 items; on `store.steampowered.com`, zero 🎮 items
-- Click "换一批 ↻" → button disables briefly → new 3 items (different from previous)
-- If the LLM keeps returning same-domain items, the card should show "这次没灵感，换一个物品试试"
+### 10. Share poster (from V1.1)
+- Click [📤] → dialog with 复制 / 下载 / 取消
+- Copy → paste into mspaint → 1080x1080 purple gradient poster
+- Download → PNG file
 
-### 10. Share poster (V1.1)
-- On a rated card, click the [📤] button in the top-right
-- Expected: a mini dialog with three buttons: "📋 复制到剪贴板", "💾 下载 PNG", "取消"
-- Click 复制 → a toast "已复制到剪贴板" appears briefly at the bottom of the card
-- Open WeChat / mspaint / any image-accepting target and paste → a 1080×1080 PNG with purple gradient background, the match score, tags, roast text, and "Vibe-Radar" wordmark should appear
-- Click 下载 → a file named `vibe-radar-<timestamp>.png` downloads; open it to verify the same layout
-- If clipboard permission is denied, a toast "剪贴板失败，已自动下载" appears and the file downloads automatically
+### 11. Impulsive click gives small curiosity delta (V1.2)
+- Make sure `interaction_count >= 1` (not first-impression path)
+- Highlight a text → IMMEDIATELY click the icon (aim for under 500ms between text selection and icon click)
+- After rating, inspect the database:
+```bash
+cd D:/qhyProject/vibe4.0/backend
+sqlite3 data/vibe_radar.db "SELECT action, delta FROM action_log ORDER BY id DESC LIMIT 5;"
+```
+- Expected: the most recent `analyze` row has `delta=0.15` (0.3× baseline)
+
+### 12. Careful star gives bigger core delta (V1.2)
+- Highlight text → click icon → wait at least 5 seconds reading the vibe card → click 💎
+- Inspect DB:
+```bash
+sqlite3 data/vibe_radar.db "SELECT action, delta FROM action_log ORDER BY id DESC LIMIT 5;"
+```
+- Expected: the most recent `star` row has `delta=15.0` (1.5× baseline)
+
+### 13. Level-up animation skip button (V1.2)
+- Trigger any level-up (easiest: reset DB, then do first analyze)
+- As soon as the level-up animation appears, click the × in the top-right corner
+- Expected: the animation immediately fades out and the normal vibe card appears
 
 ## Pass criteria
-All 10 steps complete without any JavaScript console errors in either the background worker or the content script.
+All 13 steps complete without any JavaScript console errors in either the background worker or the content script.
