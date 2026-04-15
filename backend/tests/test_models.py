@@ -5,6 +5,7 @@ from app.database import Base
 from app.models.action_log import ActionLog
 from app.models.analysis_cache import AnalysisCache
 from app.models.user import User
+from app.models.user_personality import UserPersonality
 from app.models.user_vibe_relation import UserVibeRelation
 from app.models.vibe_tag import VibeTag
 
@@ -47,4 +48,19 @@ def test_tables_are_created_and_basic_crud_works():
     assert db.scalar(select(UserVibeRelation)).core_weight == 15.0
     assert db.scalar(select(AnalysisCache)).text_hash == "abc"
     assert db.scalar(select(ActionLog)).action == "cold_start"
+
+    # V1.3: UserPersonality lazy-creates one row per user
+    up = UserPersonality(
+        user_id=1,
+        mbti="INTP",
+        constellation="双鱼座",
+        summary="这个人是典型的深度思考者，同时保有柔软的内心。",
+    )
+    db.add(up)
+    db.commit()
+    stored = db.scalar(select(UserPersonality).where(UserPersonality.user_id == 1))
+    assert stored is not None
+    assert stored.mbti == "INTP"
+    assert stored.constellation == "双鱼座"
+    assert stored.summary.startswith("这个人")
     db.close()
