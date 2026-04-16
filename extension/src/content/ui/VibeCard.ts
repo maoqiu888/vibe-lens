@@ -63,28 +63,25 @@ export function renderVibeCard(props: VibeCardProps): HTMLElement {
     // "stable" (L6+) shows nothing extra
   }
 
-  // Roast is the primary copy; if empty, fall back to showing summary as primary
-  const hasRoast = typeof result.roast === "string" && result.roast.trim() !== "";
-
-  if (hasRoast) {
-    const roast = document.createElement("div");
-    roast.className = "vr-roast";
-    roast.textContent = result.roast;
-    card.appendChild(roast);
-
-    if (result.summary && result.summary.trim() !== "") {
-      const summary = document.createElement("div");
-      summary.className = "vr-summary";
-      summary.textContent = result.summary;
-      card.appendChild(summary);
-    }
-  } else {
-    // Fall back: promote summary to primary styling
-    const roastFallback = document.createElement("div");
-    roastFallback.className = "vr-roast";
-    roastFallback.textContent = result.summary || "";
-    card.appendChild(roastFallback);
+  // V1.4: Verdict badge (color-coded)
+  if (result.verdict && result.verdict.trim() !== "") {
+    const verdictBadge = document.createElement("div");
+    const v = result.verdict.trim();
+    const colorClass =
+      v === "追" ? "vr-verdict-green" :
+      v === "跳过" ? "vr-verdict-red" :
+      "vr-verdict-yellow";
+    verdictBadge.className = `vr-verdict-badge ${colorClass}`;
+    verdictBadge.textContent = v;
+    card.appendChild(verdictBadge);
   }
+
+  // Roast is the primary copy; if empty, fall back to summary text
+  const hasRoast = typeof result.roast === "string" && result.roast.trim() !== "";
+  const roast = document.createElement("div");
+  roast.className = "vr-roast";
+  roast.textContent = hasRoast ? result.roast : (result.summary || "");
+  card.appendChild(roast);
 
   const actions = document.createElement("div");
   actions.className = "vr-actions";

@@ -53,11 +53,27 @@
   letter-spacing: 0.2px;
 }
 
-.vr-summary {
-  margin: 0 0 12px;
-  color: #888;
-  font-size: 11px;
-  font-style: italic;
+/* V1.4 verdict badge */
+.vr-verdict-badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  margin: 8px 0 4px;
+  letter-spacing: 2px;
+}
+.vr-verdict-green {
+  background: #e6f9e6;
+  color: #2d8c2d;
+}
+.vr-verdict-yellow {
+  background: #fff8e1;
+  color: #b8860b;
+}
+.vr-verdict-red {
+  background: #ffe0e0;
+  color: #d63031;
 }
 
 .vr-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
