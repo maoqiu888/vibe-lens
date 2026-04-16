@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 from datetime import datetime, timedelta
 from typing import Awaitable, Callable
 
@@ -10,6 +11,8 @@ from app import database
 from app.config import settings
 from app.models.analysis_cache import AnalysisCache
 from app.models.vibe_tag import VibeTag
+
+logger = logging.getLogger("vibe.tagger")
 
 CACHE_TTL_DAYS = 7
 NUM_TAGS = 24
@@ -37,15 +40,29 @@ PROMPT_TEMPLATE = """你是一个内容品味分析器。用户在一个【{doma
 2. 用一句话（不超过 30 字）客观描述这段内容的核心 Vibe。
 3. **最关键：输出一个 item_context 字段**，用你的预训练知识介绍这个物品到底是什么。
 
-【关于 item_context 的详细要求】
-- **必须非空**，绝对不准留空或写"无法确定"
-- 优先级：
-  a) 如果你从【页面标题】或【划到的文字】里**识别出一个真实存在的具体作品**（电影、游戏、书、音乐、专辑等），用你的训练知识写出：作品全名 + 年份 + 创作者 + 一句话真实内容梗概 + 它真正的调性（比如"名字听着压抑但其实幽默乐观"这种反差要明说）
-  b) 如果识别不出具体作品但能推断是什么内容场景（比如一段评论、一段剧情描述），就总结这段文字在讲什么
-  c) 如果连场景都推断不出（比如一句无意义的碎片），就老实说"这看起来只是一小段{domain}评论里的碎片，没能识别到具体作品"
-- **不确信的时候用试探语气**（"看起来像..."、"应该是..."）而不是装成事实
-- 长度 30-120 字，一段大白话
-- 禁止瞎编具体事实（年份、主演、作者）——如果不确定就不提这些细节
+【关于 item_context —— 最重要的字段，认真读完】
+
+**默认假设**：用户在一个 {domain} 页面上划的文字，**绝大概率是一个具体作品的标题、片段或关键情节描述**。不是随便的碎片。你必须把自己调到"我一定认得出这是什么"的模式。
+
+**你的训练数据**覆盖了大量的华语电影、英美电影、主流游戏、知名书籍和专辑。当你看到一个 1-10 字的短标题出现在 {domain} 页面上，**先假设它是某部作品**，再调用你的知识。
+
+【硬规则：必须做的】
+1. **先搜索你的记忆库**。把 {text} 和 {page_title} 当作查询，从你的训练知识里捞出匹配的作品。华语短标题也要尽力识别，不要默认是"不认识"。
+2. 识别到了 → 写出：**作品全名 + 年份（如果知道）+ 创作者 + 真实的剧情/题材 + 它真正的调性（如果名字容易误导读者，必须明说反差）**
+3. 对自己判断**确信度高**时（≥60% 认识这部作品）→ **直接陈述事实**，不要用"看起来像"、"应该是"这种退缩语气
+4. **确信度低**时，也依然要给出你最好的猜测，并用"可能是"、"看起来像"标注不确定。**但仍然要写出你能推断的东西**，不要写"我识别不出来"这种话。
+5. 禁止输出"无法确定"、"识别不出"、"看起来只是碎片"、"没头没尾"这种放弃性表述。
+6. 长度 60-150 字。
+
+【真的真的识别不出来怎么办】
+只在**以下两种极端场景**下才能走降级：
+- 选中的文字是一段**明显的普通评论**（"这部片子真好看"、"我哭了"），没有任何作品标识 → 描述这段评论的情绪
+- 选中的文字**不到 2 个字符**或是随机字符 → 描述用户可能在看什么
+即便在降级场景下，**你也要主动推测**："在豆瓣电影页面看到这种评论，大概率是一部催泪向的剧情片..."
+
+【禁止】
+- 禁止瞎编具体事实（比如造一个不存在的年份或演员）—— 如果不确定细节就不写细节，但**一定要写整体认识**
+- 禁止使用"碎片"、"没头没尾"、"识别不出"、"无法确定" 这些摆烂词
 
 【标签池】（你只能在 tag_id 里引用这些 id）：
 {tag_pool_json}
@@ -91,14 +108,20 @@ async def _default_llm_call(
         "model": settings.llm_model,
         "messages": [{"role": "user", "content": prompt}],
         "response_format": {"type": "json_object"},
-        "temperature": 0.2,
+        "temperature": 0.5,
     }
     headers = {"Authorization": f"Bearer {settings.llm_api_key}"}
+    logger.info(
+        "TAGGER CALL | text=%r | domain=%s | page_title=%r",
+        text[:80], domain, (page_title or "")[:80],
+    )
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             r = await client.post(url, json=payload, headers=headers)
             r.raise_for_status()
-            return r.json()["choices"][0]["message"]["content"]
+            content = r.json()["choices"][0]["message"]["content"]
+            logger.info("TAGGER RAW RESPONSE: %s", content[:500])
+            return content
     except httpx.TimeoutException as e:
         raise LlmTimeoutError(str(e)) from e
 

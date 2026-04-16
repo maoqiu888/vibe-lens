@@ -1,9 +1,12 @@
 import json
+import logging
 from typing import Awaitable, Callable
 
 import httpx
 
 from app.config import settings
+
+logger = logging.getLogger("vibe.roaster")
 
 LlmCallable = Callable[[str, str], Awaitable[str]]
 
@@ -150,10 +153,15 @@ async def generate_roast(
     user_prompt = _build_user_prompt(
         text, domain, match_score, user_taste_hint, item_context
     )
+    logger.info(
+        "ROASTER CALL | text=%r | match_score=%d | item_context=%r",
+        text[:60], match_score, item_context[:120],
+    )
 
     try:
         raw = await llm_call(SYSTEM_PROMPT, user_prompt)
-    except Exception:
+    except Exception as e:
+        logger.warning("ROASTER FAILED: %s", e)
         return ""
 
     try:
@@ -161,6 +169,8 @@ async def generate_roast(
         roast = parsed.get("roast", "")
         if not isinstance(roast, str):
             return ""
+        logger.info("ROASTER OUTPUT: %s", roast[:200])
         return roast
     except json.JSONDecodeError:
+        logger.warning("ROASTER JSON PARSE FAIL: %s", raw[:200])
         return ""
