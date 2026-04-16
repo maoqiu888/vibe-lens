@@ -262,7 +262,7 @@ def test_analyze_first_interaction_applies_first_impression_delta(monkeypatch):
     body = r.json()
     assert body["level"] == 1
     assert body["level_up"] is True
-    assert body["ui_stage"] == "learning"
+    assert body["ui_stage"] == "early"
     assert body["interaction_count"] == 1
     assert body["level_title"] == "初遇"
     assert body["level_emoji"] == "🌱"
@@ -363,7 +363,7 @@ def test_analyze_crosses_level_up_at_count_4(monkeypatch):
     assert body["level"] == 2
     assert body["level_up"] is True
     assert body["level_title"] == "浅尝"
-    assert body["ui_stage"] == "learning"
+    assert body["ui_stage"] == "early"
 
 
 def test_action_star_read_ms_scales_core_delta(monkeypatch):

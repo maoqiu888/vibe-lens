@@ -237,14 +237,16 @@ def compute_ui_stage(level: int) -> str:
     """Map a level to the frontend rendering stage.
 
     welcome  — L0 (popup pre-interaction)
-    learning — L1-L3 (rate card hides percentage)
-    early    — L4-L5 (percentage visible with level hint)
+    early    — L1-L5 (percentage visible with level hint)
     stable   — L6+ (percentage visible, no level hint)
+
+    V1.3.2: removed 'learning' stage that hid percentage for L1-L3.
+    User feedback: they want to see the match score from the very first
+    interaction, even if it's rough. The level badge still shows, just
+    alongside the percentage instead of replacing it.
     """
     if level <= 0:
         return "welcome"
-    if level <= 3:
-        return "learning"
     if level <= 5:
         return "early"
     return "stable"

@@ -172,8 +172,8 @@ def test_level_info_returns_title_emoji_next_at():
 
 def test_compute_ui_stage_boundaries():
     assert profile_calc.compute_ui_stage(0) == "welcome"
-    assert profile_calc.compute_ui_stage(1) == "learning"
-    assert profile_calc.compute_ui_stage(3) == "learning"
+    assert profile_calc.compute_ui_stage(1) == "early"
+    assert profile_calc.compute_ui_stage(3) == "early"
     assert profile_calc.compute_ui_stage(4) == "early"
     assert profile_calc.compute_ui_stage(5) == "early"
     assert profile_calc.compute_ui_stage(6) == "stable"
