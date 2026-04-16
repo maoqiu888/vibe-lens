@@ -1,4 +1,4 @@
-# V1.3 Manual Smoke Test
+# V1.4 Manual Smoke Test
 
 ## Prereqs
 1. Backend venv installed and active
@@ -81,8 +81,9 @@ Chrome → `chrome://extensions` → Developer mode → Load unpacked → `exten
 - Highlight text → click icon
 - Expected: error card shows "后端未运行，请先启动 FastAPI", disappears after 3s
 
-### 8. Roast display (from V1.1)
-- After rating something, expected: bold purple roast line is prominent, grey italic summary below
+### 8. Roast display (V1.4 updated)
+- After rating something, expected: bold purple roast line is prominent
+- V1.4: The grey italic summary text below the roast is GONE. Replaced by a color-coded verdict badge (see step 19).
 
 ### 9. Cross-domain recommendation (from V1.1)
 - Click "> 寻找同频代餐" link → 3 items with distinct domain emoji appear, none from source domain
@@ -188,5 +189,38 @@ for row in cur.execute('SELECT user_id, mbti, constellation, summary FROM user_p
 - The roast should NEVER contain the 24 internal tag names (慢炖沉浸 / 治愈温暖 / 赛博机械 / 黑暗压抑 / 烧脑解谜 / 认知挑战 / etc.)
 - Some outputs should reference INTP-style insights like "深度思考", "独处", "逻辑", even though the word "INTP" itself never appears in the output
 
+### 19. Verdict badge on VibeCard (V1.4)
+- Highlight text on a supported site → click purple icon
+- Expected: the vibe card shows a colored verdict badge above the roast line:
+  - "追" in green — Agent 2 judged it a strong match
+  - "看心情" in yellow/amber — uncertain / middle-ground match
+  - "跳过" in red — poor match
+- The old grey italic summary line below the roast is GONE
+
+### 20. verdict + reasons in API response (V1.4)
+- Open Chrome DevTools → Network tab → inspect POST /api/v1/vibe/analyze
+- Expected JSON fields:
+  - `verdict`: string ("追" / "看心情" / "跳过")
+  - `reasons`: array of exactly 3 strings (match point / risk point / summary)
+- The `match_score` may differ from pure cosine (Agent 2 adjusts it by up to ±15)
+
+### 21. Agent 2 graceful degradation (V1.4)
+- Temporarily break the LLM API (e.g., invalid API key) and restart uvicorn
+- Highlight text → click icon
+- Expected: Agent 1 fails first → 503 error card appears (hard fail on identifier)
+- Restore the key. Now test Agent 2 failure specifically: check backend logs for "MATCHER FAILED" when the matcher call fails. In that case the card still renders with `verdict=看心情` and `reasons=["匹配分析暂时不可用"]`, using raw cosine base_score.
+
+### 22. Roast references item details (V1.4)
+- Highlight a well-known title (e.g., "三体", "赛博朋克 2077", "挽救计划")
+- Expected: the roast references specific plot/creator/tone details (not just paraphrasing the title)
+- This is because Agent 3 (advisor) receives structured `item_profile` from Agent 1 identification
+- The roast should end with `{verdict} {final_score}%`
+
+### 23. Domain priority on ambiguous titles (V1.4)
+- Open a **movie** page with a title that also exists as a book (e.g., "挽救计划")
+- Highlight the title → click icon
+- Expected: identified as the movie version, not the book. `item_profile.genre` should reflect movie (e.g., "科幻电影") not book.
+- Check backend logs for "IDENTIFIER CALL" — the `domain=movie` is passed and prioritized in prompt.
+
 ## Pass criteria
-All 18 steps complete without any JavaScript console errors in either the background worker or the content script.
+All 23 steps complete without any JavaScript console errors in either the background worker or the content script.
