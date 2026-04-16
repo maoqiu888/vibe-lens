@@ -6,10 +6,14 @@ export interface MatchedTag {
   weight: number;
 }
 
+export type Verdict = "追" | "看心情" | "跳过";
+
 export interface AnalyzeResult {
   match_score: number;
   summary: string;
   roast: string;
+  verdict: Verdict;
+  reasons: string[];
   matched_tags: MatchedTag[];
   text_hash: string;
   cache_hit: boolean;
