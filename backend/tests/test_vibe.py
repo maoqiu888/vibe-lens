@@ -44,18 +44,45 @@ def _prime_profile():
     db.close()
 
 
-def _install_fake_llm(monkeypatch, response):
+def _install_fake_identifier(monkeypatch, response_json_str):
+    """Patches llm_identifier._default_llm_call.
+
+    The fake returns the given JSON string. Caller is responsible for
+    constructing a valid identifier response with 'tags', 'summary', and
+    'item_profile' fields.
+    """
     async def fake(text, domain, page_title, tag_pool):
-        return response
-    from app.services import llm_tagger
-    monkeypatch.setattr(llm_tagger, "_default_llm_call", fake)
+        return response_json_str
+    from app.services import llm_identifier
+    monkeypatch.setattr(llm_identifier, "_default_llm_call", fake)
 
 
-def _install_fake_roaster(monkeypatch, roast_text):
+def _install_fake_matcher(monkeypatch, adjustment=0,
+                          reasons=None, verdict="看心情"):
+    """Patches llm_matcher._default_llm_call.
+
+    Returns a JSON string that llm_matcher expects:
+    {"adjustment": int, "reasons": [str], "verdict": str}
+    """
+    if reasons is None:
+        reasons = ["匹配点默认", "风险点默认", "综合判断默认"]
+
+    async def fake(system_prompt, user_prompt):
+        return json.dumps({
+            "adjustment": adjustment,
+            "reasons": reasons,
+            "verdict": verdict,
+        })
+    from app.services import llm_matcher
+    monkeypatch.setattr(llm_matcher, "_default_llm_call", fake)
+
+
+def _install_fake_advisor(monkeypatch, roast_text="test roast"):
+    """Patches llm_advisor._default_llm_call."""
     async def fake(system_prompt, user_prompt):
         return json.dumps({"roast": roast_text})
-    from app.services import llm_roaster
-    monkeypatch.setattr(llm_roaster, "_default_llm_call", fake)
+    from app.services import llm_advisor
+    monkeypatch.setattr(llm_advisor, "_default_llm_call", fake)
 
 
 def _install_fake_recommender(monkeypatch, items):
@@ -63,6 +90,35 @@ def _install_fake_recommender(monkeypatch, items):
         return json.dumps({"items": items})
     from app.services import llm_recommender
     monkeypatch.setattr(llm_recommender, "_default_llm_call", fake)
+
+
+def _default_item_profile(item_name="test item", genre="测试",
+                          plot_gist="测试内容", tone="中性"):
+    """Build a minimal valid item_profile for identifier fake responses."""
+    return {
+        "item_name": item_name,
+        "item_name_alt": None,
+        "year": None,
+        "creator": None,
+        "genre": genre,
+        "plot_gist": plot_gist,
+        "tone": tone,
+        "name_vs_reality": "",
+        "confidence": "medium",
+    }
+
+
+def _identifier_response(tags, summary="slow",
+                         item_profile=None, **profile_overrides):
+    """Helper to build a full identifier JSON response."""
+    profile = item_profile if item_profile is not None else _default_item_profile()
+    if profile_overrides:
+        profile = {**profile, **profile_overrides}
+    return json.dumps({
+        "tags": tags,
+        "summary": summary,
+        "item_profile": profile,
+    })
 
 
 def test_analyze_returns_match_score_and_updates_curiosity(monkeypatch):
@@ -74,18 +130,23 @@ def test_analyze_returns_match_score_and_updates_curiosity(monkeypatch):
     user.interaction_count = 1
     db.commit()
     db.close()
-    _install_fake_llm(monkeypatch, json.dumps({
-        "tags": [{"tag_id": 1, "weight": 0.9}], "summary": "slow"
-    }))
-    _install_fake_roaster(monkeypatch, "慢炖神作，你会睡着但心满意足")
+    _install_fake_identifier(monkeypatch, _identifier_response(
+        [{"tag_id": 1, "weight": 0.9}], summary="slow"
+    ))
+    _install_fake_matcher(monkeypatch, adjustment=5,
+                          reasons=["a", "b", "c"], verdict="追")
+    _install_fake_advisor(monkeypatch, "慢炖神作，你会睡着但心满意足")
     r = client.post("/api/v1/vibe/analyze",
                     json={"text": "A gentle slow piece", "domain": "book"})
     assert r.status_code == 200
     body = r.json()
+    # final_score = base_score (>0 since prime_profile seeded tag_id=1) + 5
     assert body["match_score"] > 0
     assert body["matched_tags"][0]["tag_id"] == 1
     assert body["cache_hit"] is False
     assert body["roast"] == "慢炖神作，你会睡着但心满意足"
+    assert body["verdict"] == "追"
+    assert len(body["reasons"]) == 3
 
     db = database.SessionLocal()
     rel = db.scalar(
@@ -100,10 +161,11 @@ def test_analyze_returns_match_score_and_updates_curiosity(monkeypatch):
 
 def test_analyze_second_call_hits_cache(monkeypatch):
     _prime_profile()
-    _install_fake_llm(monkeypatch, json.dumps({
-        "tags": [{"tag_id": 1, "weight": 0.9}], "summary": "slow"
-    }))
-    _install_fake_roaster(monkeypatch, "roast text")
+    _install_fake_identifier(monkeypatch, _identifier_response(
+        [{"tag_id": 1, "weight": 0.9}], summary="slow"
+    ))
+    _install_fake_matcher(monkeypatch)
+    _install_fake_advisor(monkeypatch, "roast text")
     client.post("/api/v1/vibe/analyze",
                 json={"text": "same text", "domain": "book"})
     r = client.post("/api/v1/vibe/analyze",
@@ -113,25 +175,28 @@ def test_analyze_second_call_hits_cache(monkeypatch):
 
 def test_analyze_llm_parse_failure_returns_503(monkeypatch):
     _prime_profile()
-    _install_fake_llm(monkeypatch, "garbage")
-    _install_fake_roaster(monkeypatch, "unused")
+    # Identifier returns garbage → LlmParseError → 503
+    _install_fake_identifier(monkeypatch, "garbage")
+    _install_fake_matcher(monkeypatch)
+    _install_fake_advisor(monkeypatch, "unused")
     r = client.post("/api/v1/vibe/analyze",
                     json={"text": "x is too short anyway", "domain": "book"})
     assert r.status_code == 503
     assert r.json()["error"]["code"] == "LLM_PARSE_FAIL"
 
 
-def test_analyze_roaster_failure_returns_empty_roast(monkeypatch):
-    """If the roaster fails, analyze still returns 200 with roast=''."""
+def test_analyze_advisor_failure_returns_empty_roast(monkeypatch):
+    """If the advisor (Agent 3) fails, analyze still returns 200 with roast=''."""
     _prime_profile()
-    _install_fake_llm(monkeypatch, json.dumps({
-        "tags": [{"tag_id": 1, "weight": 0.9}], "summary": "slow"
-    }))
+    _install_fake_identifier(monkeypatch, _identifier_response(
+        [{"tag_id": 1, "weight": 0.9}], summary="slow"
+    ))
+    _install_fake_matcher(monkeypatch)
 
-    async def broken_roaster(system_prompt, user_prompt):
+    async def broken_advisor(system_prompt, user_prompt):
         raise RuntimeError("boom")
-    from app.services import llm_roaster
-    monkeypatch.setattr(llm_roaster, "_default_llm_call", broken_roaster)
+    from app.services import llm_advisor
+    monkeypatch.setattr(llm_advisor, "_default_llm_call", broken_advisor)
 
     r = client.post("/api/v1/vibe/analyze",
                     json={"text": "A gentle slow piece", "domain": "book"})
@@ -252,10 +317,11 @@ def test_analyze_first_interaction_applies_first_impression_delta(monkeypatch):
     """First-ever analyze gives core_weight += 10 instead of curiosity += 0.5."""
     seed_all()
     # Do NOT call _prime_profile — start pristine
-    _install_fake_llm(monkeypatch, json.dumps({
-        "tags": [{"tag_id": 1, "weight": 0.9}], "summary": "slow"
-    }))
-    _install_fake_roaster(monkeypatch, "first impression")
+    _install_fake_identifier(monkeypatch, _identifier_response(
+        [{"tag_id": 1, "weight": 0.9}], summary="slow"
+    ))
+    _install_fake_matcher(monkeypatch)
+    _install_fake_advisor(monkeypatch, "first impression")
     r = client.post("/api/v1/vibe/analyze",
                     json={"text": "my first highlight", "domain": "book"})
     assert r.status_code == 200
@@ -281,10 +347,11 @@ def test_analyze_first_interaction_applies_first_impression_delta(monkeypatch):
 
 def test_analyze_second_interaction_uses_curiosity(monkeypatch):
     seed_all()
-    _install_fake_llm(monkeypatch, json.dumps({
-        "tags": [{"tag_id": 1, "weight": 0.9}], "summary": "slow"
-    }))
-    _install_fake_roaster(monkeypatch, "r")
+    _install_fake_identifier(monkeypatch, _identifier_response(
+        [{"tag_id": 1, "weight": 0.9}], summary="slow"
+    ))
+    _install_fake_matcher(monkeypatch)
+    _install_fake_advisor(monkeypatch, "r")
     # First call (first-impression)
     client.post("/api/v1/vibe/analyze", json={"text": "first", "domain": "book"})
     # Second call — baseline curiosity (no hesitation_ms sent)
@@ -309,10 +376,11 @@ def test_analyze_second_interaction_uses_curiosity(monkeypatch):
 
 def test_analyze_impulsive_hesitation_gives_small_curiosity(monkeypatch):
     seed_all()
-    _install_fake_llm(monkeypatch, json.dumps({
-        "tags": [{"tag_id": 2, "weight": 0.9}], "summary": "x"
-    }))
-    _install_fake_roaster(monkeypatch, "r")
+    _install_fake_identifier(monkeypatch, _identifier_response(
+        [{"tag_id": 2, "weight": 0.9}], summary="x"
+    ))
+    _install_fake_matcher(monkeypatch)
+    _install_fake_advisor(monkeypatch, "r")
     client.post("/api/v1/vibe/analyze", json={"text": "first", "domain": "book"})
     client.post("/api/v1/vibe/analyze",
                 json={"text": "quick", "domain": "book", "hesitation_ms": 100})
@@ -330,10 +398,11 @@ def test_analyze_impulsive_hesitation_gives_small_curiosity(monkeypatch):
 
 def test_analyze_deliberate_hesitation_gives_bigger_curiosity(monkeypatch):
     seed_all()
-    _install_fake_llm(monkeypatch, json.dumps({
-        "tags": [{"tag_id": 3, "weight": 0.9}], "summary": "x"
-    }))
-    _install_fake_roaster(monkeypatch, "r")
+    _install_fake_identifier(monkeypatch, _identifier_response(
+        [{"tag_id": 3, "weight": 0.9}], summary="x"
+    ))
+    _install_fake_matcher(monkeypatch)
+    _install_fake_advisor(monkeypatch, "r")
     client.post("/api/v1/vibe/analyze", json={"text": "first", "domain": "book"})
     client.post("/api/v1/vibe/analyze",
                 json={"text": "careful", "domain": "book", "hesitation_ms": 5000})
@@ -351,10 +420,11 @@ def test_analyze_deliberate_hesitation_gives_bigger_curiosity(monkeypatch):
 
 def test_analyze_crosses_level_up_at_count_4(monkeypatch):
     seed_all()
-    _install_fake_llm(monkeypatch, json.dumps({
-        "tags": [{"tag_id": 1, "weight": 0.9}], "summary": "x"
-    }))
-    _install_fake_roaster(monkeypatch, "r")
+    _install_fake_identifier(monkeypatch, _identifier_response(
+        [{"tag_id": 1, "weight": 0.9}], summary="x"
+    ))
+    _install_fake_matcher(monkeypatch)
+    _install_fake_advisor(monkeypatch, "r")
     for i in range(3):
         client.post("/api/v1/vibe/analyze", json={"text": f"text-{i}", "domain": "book"})
     r = client.post("/api/v1/vibe/analyze", json={"text": "fourth", "domain": "book"})
@@ -368,10 +438,11 @@ def test_analyze_crosses_level_up_at_count_4(monkeypatch):
 
 def test_action_star_read_ms_scales_core_delta(monkeypatch):
     seed_all()
-    _install_fake_llm(monkeypatch, json.dumps({
-        "tags": [{"tag_id": 1, "weight": 0.9}], "summary": "x"
-    }))
-    _install_fake_roaster(monkeypatch, "r")
+    _install_fake_identifier(monkeypatch, _identifier_response(
+        [{"tag_id": 1, "weight": 0.9}], summary="x"
+    ))
+    _install_fake_matcher(monkeypatch)
+    _install_fake_advisor(monkeypatch, "r")
     # First analyze → core_weight=10
     client.post("/api/v1/vibe/analyze", json={"text": "first", "domain": "book"})
     # Careful star (10 second read) → delta=+15
@@ -399,8 +470,11 @@ def test_action_star_read_ms_scales_core_delta(monkeypatch):
 
 def test_action_response_carries_level_fields(monkeypatch):
     seed_all()
-    _install_fake_llm(monkeypatch, json.dumps({"tags": [{"tag_id": 1, "weight": 0.9}], "summary": "x"}))
-    _install_fake_roaster(monkeypatch, "r")
+    _install_fake_identifier(monkeypatch, _identifier_response(
+        [{"tag_id": 1, "weight": 0.9}], summary="x"
+    ))
+    _install_fake_matcher(monkeypatch)
+    _install_fake_advisor(monkeypatch, "r")
     client.post("/api/v1/vibe/analyze", json={"text": "first", "domain": "book"})
     r = client.post("/api/v1/vibe/action", json={
         "action": "star",
@@ -415,7 +489,7 @@ def test_action_response_carries_level_fields(monkeypatch):
 
 
 def test_analyze_uses_personality_summary_as_taste_hint(monkeypatch):
-    """When user has a personality summary, roaster gets it as taste_hint."""
+    """When user has a personality summary, advisor gets it as taste_hint."""
     seed_all()
 
     db = database.SessionLocal()
@@ -430,18 +504,19 @@ def test_analyze_uses_personality_summary_as_taste_hint(monkeypatch):
     db.commit()
     db.close()
 
-    _install_fake_llm(monkeypatch, json.dumps({
-        "tags": [{"tag_id": 1, "weight": 0.9}], "summary": "slow"
-    }))
+    _install_fake_identifier(monkeypatch, _identifier_response(
+        [{"tag_id": 1, "weight": 0.9}], summary="slow"
+    ))
+    _install_fake_matcher(monkeypatch)
 
     captured_hint = {}
 
-    async def capture_roaster(system_prompt, user_prompt):
+    async def capture_advisor(system_prompt, user_prompt):
         captured_hint["prompt"] = user_prompt
         return json.dumps({"roast": "test roast"})
 
-    from app.services import llm_roaster
-    monkeypatch.setattr(llm_roaster, "_default_llm_call", capture_roaster)
+    from app.services import llm_advisor
+    monkeypatch.setattr(llm_advisor, "_default_llm_call", capture_advisor)
 
     client.post("/api/v1/vibe/analyze",
                 json={"text": "some text", "domain": "book"})
@@ -450,7 +525,7 @@ def test_analyze_uses_personality_summary_as_taste_hint(monkeypatch):
 
 
 def test_analyze_falls_back_to_tag_descriptions_without_personality(monkeypatch):
-    """When user has no personality row, roaster uses V1.2 tag description fallback."""
+    """When user has no personality row, advisor uses V1.2 tag description fallback."""
     seed_all()
     db = database.SessionLocal()
     db.add(User(id=1, username="default", interaction_count=1))
@@ -462,18 +537,19 @@ def test_analyze_falls_back_to_tag_descriptions_without_personality(monkeypatch)
     db.commit()
     db.close()
 
-    _install_fake_llm(monkeypatch, json.dumps({
-        "tags": [{"tag_id": 2, "weight": 0.9}], "summary": "slow"
-    }))
+    _install_fake_identifier(monkeypatch, _identifier_response(
+        [{"tag_id": 2, "weight": 0.9}], summary="slow"
+    ))
+    _install_fake_matcher(monkeypatch)
 
     captured_hint = {}
 
-    async def capture_roaster(system_prompt, user_prompt):
+    async def capture_advisor(system_prompt, user_prompt):
         captured_hint["prompt"] = user_prompt
         return json.dumps({"roast": "test roast"})
 
-    from app.services import llm_roaster
-    monkeypatch.setattr(llm_roaster, "_default_llm_call", capture_roaster)
+    from app.services import llm_advisor
+    monkeypatch.setattr(llm_advisor, "_default_llm_call", capture_advisor)
 
     client.post("/api/v1/vibe/analyze",
                 json={"text": "some text", "domain": "book"})
@@ -502,12 +578,119 @@ def test_personality_seeds_drive_initial_match_score(monkeypatch):
     db.commit()
     db.close()
 
-    _install_fake_llm(monkeypatch, json.dumps({
-        "tags": [{"tag_id": 11, "weight": 1.0}], "summary": "brainy"
-    }))
-    _install_fake_roaster(monkeypatch, "test roast")
+    _install_fake_identifier(monkeypatch, _identifier_response(
+        [{"tag_id": 11, "weight": 1.0}], summary="brainy"
+    ))
+    _install_fake_matcher(monkeypatch)
+    _install_fake_advisor(monkeypatch, "test roast")
 
     r = client.post("/api/v1/vibe/analyze",
                     json={"text": "烧脑的作品", "domain": "book"})
     body = r.json()
     assert body["match_score"] > 0
+
+
+# ---------------------------------------------------------------------------
+# V1.4: 3-Agent chain integration tests
+# ---------------------------------------------------------------------------
+
+
+def test_analyze_3agent_pipeline_happy_path(monkeypatch):
+    """Full 3-Agent chain: identifier → matcher → advisor."""
+    seed_all()  # fresh profile, no prior relations, cosine base = 0
+    _install_fake_identifier(monkeypatch, json.dumps({
+        "tags": [{"tag_id": 1, "weight": 0.9}, {"tag_id": 5, "weight": 0.7}],
+        "summary": "deep sci-fi with hope",
+        "item_profile": {
+            "item_name": "《挽救计划》",
+            "item_name_alt": "Project Hail Mary",
+            "year": 2021,
+            "creator": "Andy Weir",
+            "genre": "硬科幻",
+            "plot_gist": "宇航员被困太空救地球",
+            "tone": "乐观幽默不是压抑",
+            "name_vs_reality": "名字听着压抑但实际乐观",
+            "confidence": "high",
+        },
+    }))
+    _install_fake_matcher(monkeypatch, adjustment=12, reasons=[
+        "名字误导被点破，你会喜欢这种反差",
+        "硬科学密度可能让你偶尔走神",
+        "综合强推",
+    ], verdict="追")
+    _install_fake_advisor(monkeypatch, "别被名字骗了，追。")
+
+    r = client.post("/api/v1/vibe/analyze",
+                    json={"text": "挽救计划", "domain": "book"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["verdict"] == "追"
+    assert len(body["reasons"]) == 3
+    assert body["reasons"][0].startswith("名字误导")
+    assert body["roast"] == "别被名字骗了，追。"
+    # compute_match_score runs BEFORE apply_core_delta for this first call, so
+    # base_score is 0 (empty profile) and final_score = 0 + 12 = 12.
+    assert body["match_score"] == 12
+    assert len(body["matched_tags"]) == 2
+    assert body["cache_hit"] is False
+
+
+def test_analyze_matcher_graceful_degradation(monkeypatch):
+    """If matcher fails, route still returns base_score + default verdict."""
+    seed_all()
+    _install_fake_identifier(monkeypatch, json.dumps({
+        "tags": [{"tag_id": 1, "weight": 0.9}],
+        "summary": "s",
+        "item_profile": {
+            "item_name": "x", "item_name_alt": None, "year": None,
+            "creator": None, "genre": "t", "plot_gist": "p",
+            "tone": "t", "name_vs_reality": "", "confidence": "low",
+        },
+    }))
+
+    async def broken_matcher(system_prompt, user_prompt):
+        raise RuntimeError("boom")
+    from app.services import llm_matcher
+    monkeypatch.setattr(llm_matcher, "_default_llm_call", broken_matcher)
+    _install_fake_advisor(monkeypatch, "fallback roast")
+
+    r = client.post("/api/v1/vibe/analyze",
+                    json={"text": "xx", "domain": "book"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["verdict"] == "看心情"
+    # Matcher degraded: final_score = base_score (no adjustment). base=0 on
+    # fresh profile → final=0.
+    assert body["match_score"] == 0
+    # Degraded matcher returns the canned single-item reasons list.
+    assert "匹配分析暂时不可用" in body["reasons"]
+
+
+def test_analyze_advisor_failure_returns_empty_roast_integration(monkeypatch):
+    """If advisor fails, route returns 200 with roast='' (match_score/verdict unaffected)."""
+    seed_all()
+    _install_fake_identifier(monkeypatch, json.dumps({
+        "tags": [{"tag_id": 1, "weight": 0.9}],
+        "summary": "s",
+        "item_profile": {
+            "item_name": "x", "item_name_alt": None, "year": None,
+            "creator": None, "genre": "t", "plot_gist": "p",
+            "tone": "t", "name_vs_reality": "", "confidence": "low",
+        },
+    }))
+    _install_fake_matcher(monkeypatch, adjustment=3,
+                          reasons=["a", "b", "c"], verdict="追")
+
+    async def broken_advisor(system_prompt, user_prompt):
+        raise RuntimeError("boom")
+    from app.services import llm_advisor
+    monkeypatch.setattr(llm_advisor, "_default_llm_call", broken_advisor)
+
+    r = client.post("/api/v1/vibe/analyze",
+                    json={"text": "xx", "domain": "book"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["roast"] == ""
+    assert body["verdict"] == "追"  # matcher still worked
+    # base_score=0 (fresh) + 3 (matcher adjustment) = 3
+    assert body["match_score"] == 3
