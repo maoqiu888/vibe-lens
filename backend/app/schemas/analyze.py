@@ -23,6 +23,8 @@ class AnalyzeResponse(BaseModel):
     match_score: int
     summary: str
     roast: str = ""
+    verdict: str = "看心情"
+    reasons: list[str] = Field(default_factory=list)
     matched_tags: list[MatchedTag]
     text_hash: str
     cache_hit: bool

@@ -9,7 +9,7 @@ from app.models.vibe_tag import VibeTag
 from app.schemas.action import ActionRequest, ActionResponse
 from app.schemas.analyze import AnalyzeRequest, AnalyzeResponse, MatchedTag
 from app.schemas.recommend import RecommendRequest, RecommendResponse
-from app.services import llm_recommender, llm_roaster, llm_tagger, profile_calc
+from app.services import llm_recommender, llm_advisor, llm_identifier, llm_matcher, profile_calc
 
 router = APIRouter(prefix="/api/v1/vibe", tags=["vibe"])
 
@@ -22,38 +22,36 @@ async def analyze(
     db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
-    # 1. Tagger (cache-aware) — pass page_title from request context so the
-    #    LLM can use it as a recognition hint for famous works.
+    # Step 1: Agent 1 — Identify (cached)
     page_title = payload.context.page_title if payload.context else None
     try:
-        result = await llm_tagger.analyze(
+        identification = await llm_identifier.identify(
             payload.text, payload.domain, page_title=page_title
         )
-    except llm_tagger.LlmParseError as e:
+    except llm_identifier.LlmParseError as e:
         raise HTTPException(
             status_code=503,
             detail={"error": {"code": "LLM_PARSE_FAIL", "message": str(e)}},
         )
-    except llm_tagger.LlmTimeoutError as e:
+    except llm_identifier.LlmTimeoutError as e:
         raise HTTPException(
             status_code=503,
             detail={"error": {"code": "LLM_TIMEOUT", "message": str(e)}},
         )
 
-    matched_tag_ids = [t["tag_id"] for t in result["matched_tags"]]
-    matched_tag_names = [t["name"] for t in result["matched_tags"]]
-    item_tags = [(t["tag_id"], t["weight"]) for t in result["matched_tags"]]
+    item_profile = identification["item_profile"]
+    matched_tags = identification["matched_tags"]
+    matched_tag_ids = [t["tag_id"] for t in matched_tags]
+    item_tags = [(t["tag_id"], t["weight"]) for t in matched_tags]
 
-    # 2. Detect first-interaction BEFORE incrementing the counter
+    # Step 2: Detect first-interaction BEFORE incrementing counter
     user = db.scalar(select(User).where(User.id == user_id))
     is_first = (user is None) or (user.interaction_count == 0)
 
-    # 3. Match score (may be 0 for first-time on empty vector — frontend hides it)
-    score = profile_calc.compute_match_score(user_id=user_id, item_tags=item_tags)
+    # Step 3: Cosine base_score (unchanged math backbone)
+    base_score = profile_calc.compute_match_score(user_id=user_id, item_tags=item_tags)
 
-    # 4. Roast — prefer MBTI-derived personality summary if present, else
-    #    fall back to V1.2's top-tag descriptions. Either way, the roaster
-    #    never sees tag names — only natural language.
+    # Step 4: Build user context
     user_personality = db.scalar(
         select(UserPersonality).where(UserPersonality.user_id == user_id)
     )
@@ -65,16 +63,33 @@ async def analyze(
         )
         user_taste_hint = "；".join(user_taste_descriptions)
 
-    roast = await llm_roaster.generate_roast(
-        text=payload.text,
-        domain=payload.domain,
-        match_score=score,
-        user_taste_hint=user_taste_hint,
-        item_context=result["item_context"],
+    user_top_descriptions = profile_calc.get_top_core_tag_descriptions(
+        user_id=user_id, n=2
     )
 
-    # 5. Apply profile update — first-interaction gets strong core signal,
-    #    subsequent calls get dynamic curiosity scaled by hesitation_ms.
+    # Step 5: Agent 2 — Match (graceful degradation on failure)
+    match_result = await llm_matcher.compute_match(
+        item_profile=item_profile,
+        base_score=base_score,
+        user_personality_summary=user_taste_hint,
+        user_top_tag_descriptions=user_top_descriptions,
+    )
+    final_score = match_result["final_score"]
+    reasons = match_result["reasons"]
+    verdict = match_result["verdict"]
+
+    # Step 6: Agent 3 — Advise (graceful failure returns "")
+    roast = await llm_advisor.advise(
+        text=payload.text,
+        domain=payload.domain,
+        item_profile=item_profile,
+        final_score=final_score,
+        reasons=reasons,
+        verdict=verdict,
+        user_personality_summary=user_taste_hint,
+    )
+
+    # Step 7: Apply profile update (unchanged from V1.2/V1.3)
     if is_first:
         profile_calc.apply_core_delta(
             user_id=user_id,
@@ -91,18 +106,20 @@ async def analyze(
             action="analyze",
         )
 
-    # 6. Increment interaction counter AFTER profile update
+    # Step 8: Increment interaction counter
     new_count, new_level, level_up = profile_calc.increment_interaction(user_id)
     info = profile_calc.level_info(new_count)
     ui_stage = profile_calc.compute_ui_stage(new_level)
 
     return AnalyzeResponse(
-        match_score=score,
-        summary=result["summary"],
+        match_score=final_score,
+        summary=identification["summary"],
         roast=roast,
-        matched_tags=[MatchedTag(**t) for t in result["matched_tags"]],
-        text_hash=result["text_hash"],
-        cache_hit=result["cache_hit"],
+        verdict=verdict,
+        reasons=reasons,
+        matched_tags=[MatchedTag(**t) for t in matched_tags],
+        text_hash=identification["text_hash"],
+        cache_hit=identification["cache_hit"],
         interaction_count=new_count,
         level=new_level,
         level_title=info["title"],
