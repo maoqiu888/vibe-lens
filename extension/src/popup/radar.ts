@@ -29,8 +29,10 @@ export async function renderRadar(root: HTMLElement, data: RadarResult): Promise
         max: 100,
       })),
       radius: "65%",
-      axisName: { color: "#555", fontSize: 12 },
-      splitArea: { show: true, areaStyle: { color: ["#f8f7ff", "#fff"] } },
+      axisName: { color: "#c8c0ff", fontSize: 12 },
+      splitArea: { show: true, areaStyle: { color: ["rgba(108,92,231,0.06)", "rgba(108,92,231,0.02)"] } },
+      splitLine: { lineStyle: { color: "rgba(108,92,231,0.15)" } },
+      axisLine: { lineStyle: { color: "rgba(108,92,231,0.2)" } },
     },
     series: [
       {
