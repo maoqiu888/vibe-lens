@@ -9,7 +9,7 @@ from app.models.vibe_tag import VibeTag
 from app.schemas.action import ActionRequest, ActionResponse
 from app.schemas.analyze import AnalyzeRequest, AnalyzeResponse, MatchedTag
 from app.schemas.recommend import RecommendRequest, RecommendResponse
-from app.services import llm_recommender, llm_advisor, llm_identifier, llm_matcher, profile_calc
+from app.services import llm_recommender, llm_identifier, llm_judge, profile_calc
 
 router = APIRouter(prefix="/api/v1/vibe", tags=["vibe"])
 
@@ -67,27 +67,19 @@ async def analyze(
         user_id=user_id, n=2
     )
 
-    # Step 5: Agent 2 — Match (graceful degradation on failure)
-    match_result = await llm_matcher.compute_match(
+    # Step 5: Judge — Match + Advise in one LLM call (graceful degradation)
+    judge_result = await llm_judge.judge(
+        text=payload.text,
+        domain=payload.domain,
         item_profile=item_profile,
         base_score=base_score,
         user_personality_summary=user_taste_hint,
         user_top_tag_descriptions=user_top_descriptions,
     )
-    final_score = match_result["final_score"]
-    reasons = match_result["reasons"]
-    verdict = match_result["verdict"]
-
-    # Step 6: Agent 3 — Advise (graceful failure returns "")
-    roast = await llm_advisor.advise(
-        text=payload.text,
-        domain=payload.domain,
-        item_profile=item_profile,
-        final_score=final_score,
-        reasons=reasons,
-        verdict=verdict,
-        user_personality_summary=user_taste_hint,
-    )
+    final_score = judge_result["final_score"]
+    reasons = judge_result["reasons"]
+    verdict = judge_result["verdict"]
+    roast = judge_result["roast"]
 
     # Step 7: Apply profile update (unchanged from V1.2/V1.3)
     if is_first:
