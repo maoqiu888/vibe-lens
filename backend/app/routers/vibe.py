@@ -148,8 +148,11 @@ async def analyze_stream(
                 payload.text, payload.domain, page_title=page_title,
                 exclude_items=payload.exclude_items or None,
             )
-        except (llm_identifier.LlmParseError, llm_identifier.LlmTimeoutError) as e:
-            yield _sse_event("error", {"code": "LLM_FAIL", "message": str(e)})
+        except llm_identifier.LlmTimeoutError:
+            yield _sse_event("error", {"code": "LLM_TIMEOUT", "message": "大模型响应超时，请重试"})
+            return
+        except llm_identifier.LlmParseError as e:
+            yield _sse_event("error", {"code": "LLM_FAIL", "message": str(e) or "大模型返回格式异常"})
             return
 
         item_profile = identification["item_profile"]

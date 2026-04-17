@@ -120,7 +120,7 @@ async def _default_llm_call(system_prompt: str, user_prompt: str) -> str:
         "temperature": 0.7,
     }
     headers = {"Authorization": f"Bearer {cfg['api_key']}"}
-    async with httpx.AsyncClient(timeout=12.0) as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         r = await client.post(url, json=payload, headers=headers)
         r.raise_for_status()
         return r.json()["choices"][0]["message"]["content"]

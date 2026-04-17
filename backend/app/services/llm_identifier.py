@@ -226,7 +226,7 @@ async def _default_llm_call(
         text[:80], domain, (page_title or "")[:80],
     )
     try:
-        async with httpx.AsyncClient(timeout=12.0) as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             r = await client.post(url, json=payload, headers=headers)
             r.raise_for_status()
             content = r.json()["choices"][0]["message"]["content"]
