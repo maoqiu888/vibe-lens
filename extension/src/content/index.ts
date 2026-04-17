@@ -34,8 +34,49 @@ function clearUi() {
   iconShownAt = null;
 }
 
+function showPersonalityPrompt(parent: HTMLElement) {
+  const card = document.createElement("div");
+  card.className = "vr-card vr-personality-prompt";
+  card.innerHTML = `
+    <div class="vr-prompt-title">先让 Vibe 认识你 ✋</div>
+    <div class="vr-prompt-sub">填写 MBTI 或星座，分析结果更准</div>
+    <div class="vr-prompt-actions">
+      <button class="vr-btn vr-btn-go">去设置</button>
+      <button class="vr-btn vr-btn-skip">跳过</button>
+    </div>
+  `;
+  const goBtn = card.querySelector(".vr-btn-go") as HTMLButtonElement;
+  const skipBtn = card.querySelector(".vr-btn-skip") as HTMLButtonElement;
+
+  goBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const popupUrl = chrome.runtime.getURL("popup/popup.html");
+    window.open(popupUrl, "_blank", "width=400,height=600");
+    card.remove();
+    clearUi();
+  });
+
+  skipBtn.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    chrome.storage.local.set({ personality_completed: true });
+    try {
+      await send({ type: "PERSONALITY_SUBMIT", payload: { mbti: null, constellation: null } } as any);
+    } catch { /* best effort */ }
+    card.remove();
+  });
+
+  parent.appendChild(card);
+}
+
 async function onIconClick(text: string, domain: Domain) {
   if (!currentIcon) return;
+
+  const stored = await chrome.storage.local.get("personality_completed");
+  if (!stored.personality_completed) {
+    showPersonalityPrompt(currentIcon);
+    return;
+  }
+
   // Show loading state inside the icon's wrap
   const loading = document.createElement("div");
   loading.className = "vr-card vr-loading";

@@ -45,6 +45,7 @@ export async function renderPersonalityQuiz(root: HTMLElement): Promise<void> {
         type: "PERSONALITY_SUBMIT",
         payload: { mbti, constellation },
       });
+      chrome.storage.local.set({ personality_completed: true });
       if (result.status === "ok" && result.summary) {
         msg.innerHTML = `<strong>✓ 已完成</strong><br><br>${result.summary}<br><br>2 秒后进入主界面…`;
       } else {
