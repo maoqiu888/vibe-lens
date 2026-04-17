@@ -165,30 +165,34 @@ def _fill_profile_defaults(raw_profile: dict, text: str) -> dict:
     return profile
 
 
-def _web_search(text: str, domain: str) -> str:
+def _web_search(text: str, domain: str, page_title: str | None = None) -> str:
     """Search DuckDuckGo for item info. Returns formatted snippets or ''."""
     domain_label = _DOMAIN_LABEL.get(domain, domain)
-    query = f"{text} {domain_label}"
+    queries = [f"{text} {domain_label}"]
+    if page_title and page_title.strip() != text.strip():
+        queries.append(f"{page_title} {domain_label}")
     try:
+        all_snippets: list[str] = []
         with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=SEARCH_MAX_RESULTS))
-        if not results:
-            return ""
-        snippets = []
-        for r in results:
-            snippets.append(f"- {r['title']}: {r['body']}")
-        context = "\n".join(snippets)
-        logger.info("WEB SEARCH | query=%r | %d results", query, len(results))
-        return context
+            for q in queries:
+                results = list(ddgs.text(q, max_results=SEARCH_MAX_RESULTS))
+                for r in results:
+                    snippet = f"- {r['title']}: {r['body']}"
+                    if snippet not in all_snippets:
+                        all_snippets.append(snippet)
+                logger.info("WEB SEARCH | query=%r | %d results", q, len(results))
+                if all_snippets:
+                    break
+        return "\n".join(all_snippets[:5]) if all_snippets else ""
     except Exception as e:
         logger.warning("WEB SEARCH FAILED: %s", e)
         return ""
 
 
-async def _async_web_search(text: str, domain: str) -> str:
+async def _async_web_search(text: str, domain: str, page_title: str | None = None) -> str:
     """Run blocking DuckDuckGo search in a thread pool."""
     loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, _web_search, text, domain)
+    return await loop.run_in_executor(None, _web_search, text, domain, page_title)
 
 
 async def _default_llm_call(
@@ -279,7 +283,7 @@ async def identify(
 
         loop = asyncio.get_event_loop()
         tag_pool_future = loop.run_in_executor(None, _load_tag_pool)
-        search_future = _async_web_search(text, domain)
+        search_future = _async_web_search(text, domain, page_title)
         tag_pool, search_context = await asyncio.gather(
             tag_pool_future, search_future
         )

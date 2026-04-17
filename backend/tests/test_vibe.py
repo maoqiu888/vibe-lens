@@ -56,7 +56,7 @@ def _install_fake_identifier(monkeypatch, response_json_str):
     from app.services import llm_identifier
     monkeypatch.setattr(llm_identifier, "_default_llm_call", fake)
 
-    async def no_search(text, domain):
+    async def no_search(text, domain, page_title=None):
         return ""
     monkeypatch.setattr(llm_identifier, "_async_web_search", no_search)
 

@@ -12,7 +12,7 @@ from app.services.seed import seed_all
 @pytest.fixture(autouse=True)
 def _no_web_search(monkeypatch):
     """Disable real web search in all identifier tests."""
-    async def noop(text, domain):
+    async def noop(text, domain, page_title=None):
         return ""
     monkeypatch.setattr(llm_identifier, "_async_web_search", noop)
 
