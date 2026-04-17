@@ -1,8 +1,14 @@
+import asyncio
+import logging
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.routers import personality, profile, vibe
+from app.services.feedback_analyzer import process_pending_feedback
+
+logger = logging.getLogger("vibe.main")
 
 app = FastAPI(title="Vibe-Radar", version="1.0.0")
 
@@ -32,3 +38,22 @@ def health():
 app.include_router(vibe.router)
 app.include_router(profile.router)
 app.include_router(personality.router)
+
+
+FEEDBACK_INTERVAL_SECONDS = 300  # 5 minutes
+
+
+async def _feedback_loop():
+    """Background loop: analyze user feedback every 5 minutes."""
+    await asyncio.sleep(10)  # wait for startup
+    while True:
+        try:
+            await process_pending_feedback()
+        except Exception as e:
+            logger.warning("Feedback analyzer error: %s", e)
+        await asyncio.sleep(FEEDBACK_INTERVAL_SECONDS)
+
+
+@app.on_event("startup")
+async def start_feedback_loop():
+    asyncio.create_task(_feedback_loop())
