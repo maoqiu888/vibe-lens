@@ -2,30 +2,30 @@
 
 /* ═══════════ Theme Variables ═══════════ */
 :host {
-  --vr-bg: linear-gradient(145deg, rgba(22, 15, 42, 0.96), rgba(30, 22, 56, 0.94));
-  --vr-card-border: rgba(108, 92, 231, 0.2);
-  --vr-card-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
-  --vr-card-top-line: linear-gradient(90deg, transparent, rgba(162, 155, 254, 0.4), rgba(253, 121, 168, 0.3), transparent);
-  --vr-text: #e0dced;
-  --vr-text-dim: rgba(162, 155, 254, 0.5);
-  --vr-text-dimmer: rgba(162, 155, 254, 0.3);
-  --vr-accent: #a29bfe;
-  --vr-accent-bg: rgba(108, 92, 231, 0.12);
-  --vr-accent-border: rgba(108, 92, 231, 0.15);
-  --vr-input-bg: rgba(108, 92, 231, 0.08);
-  --vr-green: #55efc4;
-  --vr-green-bg: rgba(85, 239, 196, 0.12);
-  --vr-green-border: rgba(85, 239, 196, 0.25);
-  --vr-yellow: #ffeaa7;
-  --vr-yellow-bg: rgba(253, 203, 110, 0.12);
-  --vr-yellow-border: rgba(253, 203, 110, 0.25);
-  --vr-red: #ff7675;
-  --vr-red-bg: rgba(255, 118, 117, 0.1);
-  --vr-red-border: rgba(255, 118, 117, 0.2);
-  --vr-link: rgba(162, 155, 254, 0.6);
-  --vr-link-hover: #a29bfe;
-  --vr-retry: rgba(253, 121, 168, 0.6);
-  --vr-retry-hover: #fd79a8;
+  --vr-bg: linear-gradient(145deg, rgba(18, 12, 38, 0.97), rgba(25, 18, 48, 0.95));
+  --vr-card-border: rgba(130, 120, 255, 0.25);
+  --vr-card-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+  --vr-card-top-line: linear-gradient(90deg, transparent, rgba(162, 155, 254, 0.5), rgba(253, 121, 168, 0.4), transparent);
+  --vr-text: #f0eef8;
+  --vr-text-dim: rgba(200, 195, 230, 0.7);
+  --vr-text-dimmer: rgba(200, 195, 230, 0.45);
+  --vr-accent: #b8b0ff;
+  --vr-accent-bg: rgba(108, 92, 231, 0.15);
+  --vr-accent-border: rgba(108, 92, 231, 0.25);
+  --vr-input-bg: rgba(108, 92, 231, 0.1);
+  --vr-green: #6cf5d6;
+  --vr-green-bg: rgba(85, 239, 196, 0.15);
+  --vr-green-border: rgba(85, 239, 196, 0.35);
+  --vr-yellow: #ffe8a0;
+  --vr-yellow-bg: rgba(253, 203, 110, 0.15);
+  --vr-yellow-border: rgba(253, 203, 110, 0.35);
+  --vr-red: #ff8a8a;
+  --vr-red-bg: rgba(255, 118, 117, 0.13);
+  --vr-red-border: rgba(255, 118, 117, 0.3);
+  --vr-link: rgba(180, 175, 255, 0.8);
+  --vr-link-hover: #c8c0ff;
+  --vr-retry: rgba(255, 140, 160, 0.8);
+  --vr-retry-hover: #ffa0b0;
   --vr-select-option-bg: #1e1638;
 }
 
@@ -462,22 +462,25 @@
 
 /* Theme toggle button */
 .vr-theme-toggle {
-  position: absolute;
-  top: 14px; right: 48px;
-  width: 28px; height: 28px;
-  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 6px 0;
+  border: 1px solid var(--vr-accent-border);
   background: var(--vr-accent-bg);
-  color: var(--vr-accent);
+  color: var(--vr-text-dim);
   border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
-  display: flex; align-items: center; justify-content: center;
+  font-size: 11px;
   transition: all 0.2s;
-  border: 1px solid var(--vr-accent-border);
 }
 .vr-theme-toggle:hover {
   background: var(--vr-input-bg);
   border-color: var(--vr-accent);
+  color: var(--vr-accent);
 }
 
 /* ═══════════ Recommend Card ═══════════ */

@@ -3,7 +3,7 @@ body {
   margin: 0;
   font-family: -apple-system, "PingFang SC", sans-serif;
   background: linear-gradient(180deg, #0f0a1e, #1a1233);
-  color: #e0dced;
+  color: #f0eef8;
   min-height: 500px;
 }
 
@@ -15,7 +15,7 @@ h2 {
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
   background-clip: text;
 }
-.subtitle { color: rgba(162, 155, 254, 0.5); font-size: 12px; margin-bottom: 16px; }
+.subtitle { color: rgba(200, 195, 230, 0.65); font-size: 12px; margin-bottom: 16px; }
 
 .category {
   margin-bottom: 16px;
@@ -74,7 +74,7 @@ h2 {
   border: 1px solid rgba(108, 92, 231, 0.1);
   border-radius: 10px;
   font-size: 12px;
-  color: rgba(162, 155, 254, 0.6);
+  color: rgba(200, 195, 230, 0.75);
 }
 
 .error { color: #ff7675; padding: 12px; }
@@ -132,7 +132,7 @@ h2 {
 .vr-level-current {
   font-size: 16px;
   font-weight: 700;
-  color: #a29bfe;
+  color: #c8c0ff;
   margin-bottom: 10px;
   text-align: center;
 }
@@ -153,7 +153,7 @@ h2 {
 }
 .vr-level-counts {
   font-size: 11px;
-  color: rgba(162, 155, 254, 0.5);
+  color: rgba(200, 195, 230, 0.7);
   text-align: center;
 }
 

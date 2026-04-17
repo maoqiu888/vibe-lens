@@ -144,7 +144,6 @@ async function onIconClick(text: string, domain: Domain, excludeItems?: string[]
   const card = document.createElement("div");
   card.className = "vr-card vr-stream-card";
   card.innerHTML = `
-    <button class="vr-theme-toggle" title="切换主题">🌓</button>
     <div class="vr-stream-step">
       <div class="vr-step-bar"><div class="vr-step-fill"></div></div>
       <div class="vr-step-labels">
@@ -158,11 +157,6 @@ async function onIconClick(text: string, domain: Domain, excludeItems?: string[]
     <div class="vr-stream-roast" style="display:none"></div>
     <div class="vr-stream-actions" style="display:none"></div>
   `;
-  card.querySelector(".vr-theme-toggle")!.addEventListener("click", (e) => {
-    e.stopPropagation();
-    toggleTheme();
-  });
-
   currentIcon.appendChild(card);
   currentCard = card;
 
@@ -332,6 +326,21 @@ function showStreamActions(
     });
     card.appendChild(retryLink);
   }
+
+  // Clear floats before toggle
+  const clearDiv = document.createElement("div");
+  clearDiv.style.clear = "both";
+  card.appendChild(clearDiv);
+
+  // Theme toggle at bottom
+  const themeBtn = document.createElement("button");
+  themeBtn.className = "vr-theme-toggle";
+  themeBtn.textContent = "🌓 切换亮色 / 暗色";
+  themeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleTheme();
+  });
+  card.appendChild(themeBtn);
 }
 
 document.addEventListener("mouseup", (e) => {
