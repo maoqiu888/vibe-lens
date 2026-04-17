@@ -226,8 +226,12 @@ async def identify(
                     "cache_hit": True,
                 }
 
-        tag_pool = _load_tag_pool()
-        search_context = await _async_web_search(text, domain)
+        loop = asyncio.get_event_loop()
+        tag_pool_future = loop.run_in_executor(None, _load_tag_pool)
+        search_future = _async_web_search(text, domain)
+        tag_pool, search_context = await asyncio.gather(
+            tag_pool_future, search_future
+        )
         raw = await llm_call(text, domain, page_title, tag_pool, search_context)
         try:
             parsed = json.loads(raw)
