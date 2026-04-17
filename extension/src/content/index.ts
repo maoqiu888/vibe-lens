@@ -34,34 +34,61 @@ function clearUi() {
   iconShownAt = null;
 }
 
-function showPersonalityPrompt(parent: HTMLElement) {
+const CONSTELLATIONS = [
+  "白羊座", "金牛座", "双子座", "巨蟹座", "狮子座", "处女座",
+  "天秤座", "天蝎座", "射手座", "摩羯座", "水瓶座", "双鱼座",
+];
+
+function showPersonalityPrompt(parent: HTMLElement, onDone: () => void) {
   const card = document.createElement("div");
   card.className = "vr-card vr-personality-prompt";
   card.innerHTML = `
-    <div class="vr-prompt-title">先让 Vibe 认识你 ✋</div>
-    <div class="vr-prompt-sub">填写 MBTI 或星座，分析结果更准</div>
+    <div class="vr-prompt-title">先让 Vibe 认识你</div>
+    <div class="vr-prompt-sub">填写后分析更准，也可以跳过</div>
+    <label class="vr-field-label">MBTI <span style="color:#999;font-size:10px">（可选）</span></label>
+    <input type="text" class="vr-quiz-input" placeholder="INTP" maxlength="4" />
+    <label class="vr-field-label">星座 <span style="color:#999;font-size:10px">（可选）</span></label>
+    <select class="vr-quiz-select">
+      <option value="">—— 不填 ——</option>
+      ${CONSTELLATIONS.map((c) => `<option value="${c}">${c}</option>`).join("")}
+    </select>
     <div class="vr-prompt-actions">
-      <button class="vr-btn vr-btn-go">去设置</button>
       <button class="vr-btn vr-btn-skip">跳过</button>
+      <button class="vr-btn vr-btn-go">确认</button>
     </div>
+    <div class="vr-quiz-msg"></div>
   `;
-  const goBtn = card.querySelector(".vr-btn-go") as HTMLButtonElement;
+  const mbtiInput = card.querySelector(".vr-quiz-input") as HTMLInputElement;
+  const constellationSelect = card.querySelector(".vr-quiz-select") as HTMLSelectElement;
+  const submitBtn = card.querySelector(".vr-btn-go") as HTMLButtonElement;
   const skipBtn = card.querySelector(".vr-btn-skip") as HTMLButtonElement;
+  const msg = card.querySelector(".vr-quiz-msg") as HTMLElement;
 
-  goBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    chrome.runtime.sendMessage({ type: "OPEN_PERSONALITY" });
-    card.remove();
-    clearUi();
-  });
-
-  skipBtn.addEventListener("click", async (e) => {
-    e.stopPropagation();
-    chrome.storage.local.set({ personality_completed: true });
+  async function submit(mbti: string | null, constellation: string | null) {
+    submitBtn.disabled = true;
+    skipBtn.disabled = true;
+    msg.textContent = "Vibe 正在理解你…";
     try {
-      await send({ type: "PERSONALITY_SUBMIT", payload: { mbti: null, constellation: null } } as any);
-    } catch { /* best effort */ }
-    card.remove();
+      await send({ type: "PERSONALITY_SUBMIT", payload: { mbti, constellation } } as any);
+      chrome.storage.local.set({ personality_completed: true });
+      msg.textContent = "✓ 开始分析…";
+      setTimeout(() => { card.remove(); onDone(); }, 600);
+    } catch (e: any) {
+      msg.textContent = `提交失败: ${e?.message ?? "未知"}`;
+      submitBtn.disabled = false;
+      skipBtn.disabled = false;
+    }
+  }
+
+  skipBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    submit(null, null);
+  });
+  submitBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const mbti = mbtiInput.value.trim().toUpperCase() || null;
+    const constellation = constellationSelect.value || null;
+    submit(mbti, constellation);
   });
 
   parent.appendChild(card);
@@ -73,7 +100,31 @@ async function onIconClick(text: string, domain: Domain, excludeItems?: string[]
   if (!excludeItems) {
     const stored = await chrome.storage.local.get("personality_completed");
     if (!stored.personality_completed) {
-      showPersonalityPrompt(currentIcon);
+      showPersonalityPrompt(currentIcon, () => onIconClick(text, domain));
+      return;
+    }
+  }
+
+  // Check frontend cache (skip on retry)
+  if (!excludeItems) {
+    const cacheKey = `vr_cache_${text}_${domain}`;
+    const cached = await chrome.storage.local.get(cacheKey);
+    if (cached[cacheKey]) {
+      const result = cached[cacheKey] as AnalyzeResult;
+      const retryHandler = (newExcludes: string[]) => {
+        chrome.storage.local.remove(cacheKey);
+        currentCard?.remove();
+        currentCard = null;
+        onIconClick(text, domain, newExcludes);
+      };
+      currentCard = renderVibeCard({
+        parent: currentIcon,
+        result,
+        sourceDomain: domain,
+        text,
+        onClose: clearUi,
+        onRetry: retryHandler,
+      });
       return;
     }
   }
@@ -140,7 +191,12 @@ async function onIconClick(text: string, domain: Domain, excludeItems?: string[]
     stepFill.style.width = "100%";
     loading.remove();
 
+    // Cache result for instant replay
+    const cacheKey = `vr_cache_${text}_${domain}`;
+    chrome.storage.local.set({ [cacheKey]: result });
+
     const retryHandler = (newExcludes: string[]) => {
+      chrome.storage.local.remove(cacheKey);
       const allExcludes = [...(excludeItems || []), ...newExcludes];
       currentCard?.remove();
       currentCard = null;

@@ -499,10 +499,9 @@
 }
 .vr-levelup-skip:hover { background: rgba(255, 255, 255, 0.3); }
 
-/* V1.5 personality prompt intercept */
+/* V1.5 inline personality quiz */
 .vr-personality-prompt {
-  text-align: center;
-  padding: 20px 16px;
+  padding: 16px;
 }
 .vr-prompt-title {
   font-size: 16px;
@@ -543,6 +542,32 @@
   cursor: pointer;
 }
 .vr-btn-skip:hover { background: #e4ddff; }
+.vr-field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  margin: 10px 0 4px;
+}
+.vr-quiz-input, .vr-quiz-select {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.vr-quiz-input:focus, .vr-quiz-select:focus {
+  outline: none;
+  border-color: #6c5ce7;
+}
+.vr-quiz-msg {
+  font-size: 11px;
+  color: #6c5ce7;
+  text-align: center;
+  margin-top: 8px;
+  min-height: 16px;
+}
 
 /* V1.3 first-time onboarding hint under the action buttons */
 .vr-onboarding-hint {
