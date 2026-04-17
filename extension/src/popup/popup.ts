@@ -15,6 +15,8 @@ async function main() {
       mod.renderWelcome(root);
     } else {
       // Brand-new user — show personality quiz
+      // Also clear the content script's flag so it will intercept highlights
+      chrome.storage.local.remove("personality_completed");
       const mod = await import("./personality");
       await mod.renderPersonalityQuiz(root);
     }

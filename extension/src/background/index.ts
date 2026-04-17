@@ -61,6 +61,21 @@ async function routeApi(msg: Msg): Promise<unknown> {
   }
 }
 
+// On extension startup, sync personality_completed flag with backend state
+async function syncPersonalityFlag() {
+  try {
+    const data = await fetchJson<{ has_personality: boolean }>("GET", "/profile/radar");
+    if (!data.has_personality) {
+      chrome.storage.local.remove("personality_completed");
+    } else {
+      chrome.storage.local.set({ personality_completed: true });
+    }
+  } catch {
+    // Backend not running — leave flag as-is
+  }
+}
+syncPersonalityFlag();
+
 chrome.runtime.onMessage.addListener(
   (msg: any, _sender, sendResponse: (r: MsgResponse<unknown>) => void) => {
     if (msg.type === "OPEN_PERSONALITY") {

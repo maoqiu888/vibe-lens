@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from typing import Awaitable, Callable
 
 import httpx
@@ -173,6 +174,10 @@ async def judge(
     roast = parsed.get("roast", "")
     if not isinstance(roast, str):
         roast = ""
+
+    # Post-process: replace any wrong percentage with the actual final_score
+    if roast:
+        roast = re.sub(r'\d{1,3}%', f'{final_score}%', roast)
 
     logger.info(
         "JUDGE OUTPUT | final=%d | verdict=%s | roast=%s",
