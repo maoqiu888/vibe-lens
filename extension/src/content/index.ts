@@ -4,6 +4,7 @@ import type { AnalyzeResult, Domain, Msg } from "../shared/types";
 import { detectDomain } from "./domain";
 import { renderFloatingIcon } from "./ui/FloatingIcon";
 import { playLevelUpAnimation } from "./ui/LevelUpOverlay";
+import { renderRecommendCard } from "./ui/RecommendCard";
 import { renderVibeCard } from "./ui/VibeCard";
 import INLINE_CSS from "./ui/styles.css?inline";
 
@@ -294,28 +295,28 @@ function showStreamActions(
   actions.appendChild(bomb);
   card.appendChild(actions);
 
-  // Recommend link
-  const recommendLink = document.createElement("a");
-  recommendLink.className = "vr-recommend-link";
-  recommendLink.textContent = "> 寻找同频代餐";
-  recommendLink.addEventListener("click", (e) => {
-    e.preventDefault();
+  // Bottom toolbar: recommend + retry + theme in a row
+  const toolbar = document.createElement("div");
+  toolbar.className = "vr-toolbar";
+
+  const recommendBtn = document.createElement("button");
+  recommendBtn.className = "vr-toolbar-btn";
+  recommendBtn.innerHTML = "🔍 同频代餐";
+  recommendBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    recommendLink.style.display = "none";
+    recommendBtn.style.display = "none";
     renderRecommendCard({
       parent: card, text, sourceDomain: domain,
       matchedTagIds: result.matched_tags.map(t => t.tag_id),
     });
   });
-  card.appendChild(recommendLink);
+  toolbar.appendChild(recommendBtn);
 
-  // Retry link
   if (result.item_name) {
-    const retryLink = document.createElement("a");
-    retryLink.className = "vr-retry-link";
-    retryLink.textContent = "✕ 不是这个，重新识别";
-    retryLink.addEventListener("click", (e) => {
-      e.preventDefault();
+    const retryBtn = document.createElement("button");
+    retryBtn.className = "vr-toolbar-btn vr-toolbar-retry";
+    retryBtn.innerHTML = "↻ 重新识别";
+    retryBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       const cacheKey = `vr_cache_${text}_${domain}`;
       chrome.storage.local.remove(cacheKey);
@@ -324,23 +325,20 @@ function showStreamActions(
       currentCard = null;
       onIconClick(text, domain, allExcludes);
     });
-    card.appendChild(retryLink);
+    toolbar.appendChild(retryBtn);
   }
 
-  // Clear floats before toggle
-  const clearDiv = document.createElement("div");
-  clearDiv.style.clear = "both";
-  card.appendChild(clearDiv);
-
-  // Theme toggle at bottom
   const themeBtn = document.createElement("button");
-  themeBtn.className = "vr-theme-toggle";
-  themeBtn.textContent = "🌓 切换亮色 / 暗色";
+  themeBtn.className = "vr-toolbar-btn";
+  themeBtn.innerHTML = "🌓";
+  themeBtn.title = "切换亮色 / 暗色";
   themeBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     toggleTheme();
   });
-  card.appendChild(themeBtn);
+  toolbar.appendChild(themeBtn);
+
+  card.appendChild(toolbar);
 }
 
 document.addEventListener("mouseup", (e) => {

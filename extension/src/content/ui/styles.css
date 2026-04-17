@@ -417,70 +417,38 @@
   100% { opacity: 0; transform: translate(-50%, -4px); }
 }
 
-/* ═══════════ Links ═══════════ */
-.vr-recommend-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 12px;
-  padding: 6px 12px;
-  font-size: 11px;
-  color: var(--vr-link);
-  cursor: pointer;
-  border: 1px solid var(--vr-accent-border);
-  border-radius: 8px;
-  background: var(--vr-accent-bg);
-  transition: all 0.2s;
-  float: right;
-}
-.vr-recommend-link:hover {
-  color: var(--vr-link-hover);
-  border-color: var(--vr-accent);
-  background: var(--vr-input-bg);
-}
-
-.vr-retry-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 8px;
-  padding: 6px 12px;
-  font-size: 11px;
-  color: var(--vr-retry);
-  cursor: pointer;
-  border: 1px solid var(--vr-red-border);
-  border-radius: 8px;
-  background: var(--vr-red-bg);
-  transition: all 0.2s;
-  float: right;
-  clear: right;
-}
-.vr-retry-link:hover {
-  color: var(--vr-retry-hover);
-  border-color: var(--vr-red);
-}
-
-/* Theme toggle button */
-.vr-theme-toggle {
+/* ═══════════ Bottom Toolbar ═══════════ */
+.vr-toolbar {
   display: flex;
-  align-items: center;
-  justify-content: center;
   gap: 6px;
-  width: 100%;
-  margin-top: 10px;
-  padding: 6px 0;
-  border: 1px solid var(--vr-accent-border);
-  background: var(--vr-accent-bg);
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--vr-accent-border);
+}
+.vr-toolbar-btn {
+  flex: 1;
+  padding: 7px 0;
+  font-size: 11px;
   color: var(--vr-text-dim);
+  background: var(--vr-accent-bg);
+  border: 1px solid var(--vr-accent-border);
   border-radius: 8px;
   cursor: pointer;
-  font-size: 11px;
   transition: all 0.2s;
+  text-align: center;
+  white-space: nowrap;
 }
-.vr-theme-toggle:hover {
-  background: var(--vr-input-bg);
-  border-color: var(--vr-accent);
+.vr-toolbar-btn:hover {
   color: var(--vr-accent);
+  border-color: var(--vr-accent);
+  background: var(--vr-input-bg);
+}
+.vr-toolbar-retry {
+  color: var(--vr-retry);
+}
+.vr-toolbar-retry:hover {
+  color: var(--vr-retry-hover);
+  border-color: var(--vr-retry-hover);
 }
 
 /* ═══════════ Recommend Card ═══════════ */
