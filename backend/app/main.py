@@ -51,6 +51,11 @@ async def index():
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/vibe.js")
+async def vibe_js():
+    return FileResponse(STATIC_DIR / "vibe.js", media_type="application/javascript")
+
+
 FEEDBACK_INTERVAL_SECONDS = 300  # 5 minutes
 
 
