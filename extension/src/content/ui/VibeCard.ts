@@ -89,12 +89,12 @@ export function renderVibeCard(props: VibeCardProps): HTMLElement {
 
   const star = document.createElement("button");
   star.className = "vr-btn star";
-  star.textContent = "❤️ 我喜欢";
+  star.textContent = "👍 太准了吧";
   star.addEventListener("click", async () => {
     const readMs = Math.max(0, Math.round(performance.now() - cardShownAt));
     try {
-      const actionResult = await sendAction("star", result, readMs);
-      star.textContent = "✓ 已确权";
+      const actionResult = await sendAction("star", result, readMs, sourceDomain);
+      star.textContent = "✓ 收到反馈";
       handlePostActionLevelUp(card, actionResult, onClose);
     } catch {
       star.textContent = "提交失败";
@@ -104,12 +104,12 @@ export function renderVibeCard(props: VibeCardProps): HTMLElement {
 
   const bomb = document.createElement("button");
   bomb.className = "vr-btn bomb";
-  bomb.textContent = "👎 我不喜欢";
+  bomb.textContent = "🤔 差点意思";
   bomb.addEventListener("click", async () => {
     const readMs = Math.max(0, Math.round(performance.now() - cardShownAt));
     try {
-      const actionResult = await sendAction("bomb", result, readMs);
-      bomb.textContent = "✓ 已标记";
+      const actionResult = await sendAction("bomb", result, readMs, sourceDomain);
+      bomb.textContent = "✓ 收到反馈";
       handlePostActionLevelUp(card, actionResult, onClose);
     } catch {
       bomb.textContent = "提交失败";
@@ -170,6 +170,7 @@ async function sendAction(
   action: "star" | "bomb",
   result: AnalyzeResult,
   readMs: number,
+  sourceDomain: string,
 ): Promise<ActionResult> {
   const msg: Msg = {
     type: "ACTION",
@@ -178,6 +179,10 @@ async function sendAction(
       matchedTagIds: result.matched_tags.map((t) => t.tag_id),
       textHash: result.text_hash,
       readMs,
+      itemName: result.item_name,
+      domain: sourceDomain,
+      matchScore: result.match_score,
+      verdict: result.verdict,
     },
   };
   return await send<ActionResult>(msg);

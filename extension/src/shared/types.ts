@@ -77,7 +77,7 @@ export interface RecommendResult {
 
 export type Msg =
   | { type: "ANALYZE"; payload: { text: string; domain: Domain; pageTitle: string; pageUrl: string; hesitationMs: number | null; excludeItems?: string[] } }
-  | { type: "ACTION"; payload: { action: "star" | "bomb"; matchedTagIds: number[]; textHash?: string; readMs: number | null } }
+  | { type: "ACTION"; payload: { action: "star" | "bomb"; matchedTagIds: number[]; textHash?: string; readMs: number | null; itemName?: string; domain?: string; matchScore?: number; verdict?: string } }
   | { type: "GET_RADAR" }
   | { type: "RECOMMEND"; payload: { text: string; sourceDomain: Domain; matchedTagIds: number[] } }
   | { type: "PERSONALITY_SUBMIT"; payload: { mbti: string | null; constellation: string | null } };

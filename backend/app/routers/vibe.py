@@ -9,6 +9,7 @@ from app.models.vibe_tag import VibeTag
 from app.schemas.action import ActionRequest, ActionResponse
 from app.schemas.analyze import AnalyzeRequest, AnalyzeResponse, MatchedTag
 from app.schemas.recommend import RecommendRequest, RecommendResponse
+from app.models.match_feedback import MatchFeedback
 from app.services import llm_recommender, llm_identifier, llm_judge, profile_calc
 
 router = APIRouter(prefix="/api/v1/vibe", tags=["vibe"])
@@ -127,6 +128,7 @@ async def analyze(
 @router.post("/action", response_model=ActionResponse)
 def action(
     payload: ActionRequest,
+    db: Session = Depends(get_db),
     user_id: int = Depends(get_current_user_id),
 ):
     delta = profile_calc.dynamic_core_delta(payload.action, payload.read_ms)
@@ -136,6 +138,21 @@ def action(
         delta=delta,
         action=payload.action,
     )
+
+    # Save match feedback for background analysis
+    if payload.text_hash and payload.item_name:
+        db.add(MatchFeedback(
+            user_id=user_id,
+            text_hash=payload.text_hash or "",
+            item_name=payload.item_name or "",
+            domain=payload.domain or "",
+            match_score=payload.match_score or 0,
+            verdict=payload.verdict or "",
+            feedback="accurate" if payload.action == "star" else "inaccurate",
+            matched_tag_ids=",".join(str(t) for t in payload.matched_tag_ids),
+        ))
+        db.commit()
+
     new_count, new_level, level_up = profile_calc.increment_interaction(user_id)
     info = profile_calc.level_info(new_count)
     return ActionResponse(

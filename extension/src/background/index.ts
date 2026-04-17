@@ -45,6 +45,10 @@ async function routeApi(msg: Msg): Promise<unknown> {
         matched_tag_ids: msg.payload.matchedTagIds,
         text_hash: msg.payload.textHash,
         read_ms: msg.payload.readMs,
+        item_name: msg.payload.itemName,
+        domain: msg.payload.domain,
+        match_score: msg.payload.matchScore,
+        verdict: msg.payload.verdict,
       });
     case "GET_RADAR":
       return fetchJson("GET", "/profile/radar");

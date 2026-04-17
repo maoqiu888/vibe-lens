@@ -8,6 +8,10 @@ class ActionRequest(BaseModel):
     matched_tag_ids: list[int]
     text_hash: str | None = None
     read_ms: int | None = None
+    item_name: str | None = None
+    domain: str | None = None
+    match_score: int | None = None
+    verdict: str | None = None
 
 
 class ActionResponse(BaseModel):

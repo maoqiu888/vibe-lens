@@ -4,6 +4,7 @@ from app import database
 from app.database import Base
 from app.models.action_log import ActionLog  # noqa: F401
 from app.models.analysis_cache import AnalysisCache  # noqa: F401
+from app.models.match_feedback import MatchFeedback  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.user_personality import UserPersonality  # noqa: F401
 from app.models.user_vibe_relation import UserVibeRelation  # noqa: F401
