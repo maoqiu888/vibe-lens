@@ -453,22 +453,62 @@
 
 /* ═══════════ Recommend Card ═══════════ */
 .vr-recommend-card {
-  margin-top: 10px;
-  position: relative; top: auto; left: auto;
-  background: rgba(22, 15, 42, 0.6);
-  border: 1px solid rgba(108, 92, 231, 0.12);
+  margin-top: 12px;
+  position: relative;
+  top: auto;
+  left: auto;
+  width: auto;
+  background: var(--vr-bg);
+  border: 1px solid var(--vr-card-border);
+  box-shadow: none;
+  padding: 14px;
 }
-.vr-recommend-body { display: flex; flex-direction: column; gap: 10px; }
+.vr-recommend-card::before { display: none; }
+.vr-recommend-body { display: flex; flex-direction: column; gap: 4px; }
 .vr-recommend-item {
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(108, 92, 231, 0.08);
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--vr-accent-bg);
+  border: 1px solid var(--vr-accent-border);
+  transition: border-color 0.2s;
 }
-.vr-recommend-item:last-child { border-bottom: none; }
-.vr-recommend-name { font-size: 13px; font-weight: 600; color: #e0dced; margin-bottom: 3px; }
-.vr-recommend-reason { font-size: 11px; color: rgba(208, 205, 224, 0.6); line-height: 1.4; }
-.vr-recommend-loading { color: #a29bfe; font-size: 12px; padding: 10px 0; text-align: center; }
-.vr-recommend-error { color: #ff7675; font-size: 12px; padding: 10px 0; text-align: center; }
-.vr-reroll { margin-top: 10px; width: 100%; background: rgba(108, 92, 231, 0.12); color: #a29bfe; }
+.vr-recommend-item:hover { border-color: var(--vr-accent); }
+.vr-recommend-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vr-text);
+  margin-bottom: 4px;
+}
+.vr-recommend-reason {
+  font-size: 11px;
+  color: var(--vr-text-dim);
+  line-height: 1.5;
+}
+.vr-recommend-loading {
+  color: var(--vr-accent);
+  font-size: 12px;
+  padding: 16px 0;
+  text-align: center;
+}
+.vr-recommend-error {
+  color: var(--vr-red);
+  font-size: 12px;
+  padding: 16px 0;
+  text-align: center;
+}
+.vr-reroll {
+  margin-top: 8px;
+  width: 100%;
+  padding: 8px;
+  background: var(--vr-accent-bg);
+  border: 1px solid var(--vr-accent-border);
+  color: var(--vr-accent);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+.vr-reroll:hover { border-color: var(--vr-accent); }
 .vr-reroll:disabled { opacity: 0.3; cursor: not-allowed; }
 
 /* ═══════════ Learning Badge ═══════════ */
