@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vibe-Radar · 审美雷达</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 50%, #fdf2f8 100%);
+  --card: rgba(255,255,255,0.85);
+  --card-border: rgba(108,92,231,0.12);
+  --text: #2d2545;
+  --text-dim: rgba(108,92,231,0.6);
+  --accent: #6c5ce7;
+  --accent-light: #a29bfe;
+  --pink: #fd79a8;
+  --green: #00b894;
+  --yellow: #e17055;
+  --red: #d63031;
+  --input-bg: rgba(108,92,231,0.04);
+}
+body.dark {
+  --bg: linear-gradient(135deg, #0f0a1e 0%, #1a1233 50%, #1e1028 100%);
+  --card: rgba(22,15,42,0.9);
+  --card-border: rgba(130,120,255,0.2);
+  --text: #f0eef8;
+  --text-dim: rgba(200,195,230,0.65);
+  --accent: #a29bfe;
+  --accent-light: #c8c0ff;
+  --input-bg: rgba(108,92,231,0.1);
+}
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+.container { max-width: 520px; margin: 0 auto; padding: 40px 20px; }
+
+/* Header */
+.header { text-align: center; margin-bottom: 32px; }
+.logo { font-size: 28px; font-weight: 800; background: linear-gradient(135deg, #6c5ce7, #a29bfe, #fd79a8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.tagline { font-size: 13px; color: var(--text-dim); margin-top: 6px; }
+
+/* Nav tabs */
+.nav { display: flex; gap: 4px; margin-bottom: 24px; background: var(--input-bg); border-radius: 12px; padding: 4px; }
+.nav-btn { flex: 1; padding: 10px; border: none; background: none; color: var(--text-dim); border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; }
+.nav-btn.active { background: var(--card); color: var(--accent); box-shadow: 0 2px 8px rgba(108,92,231,0.1); font-weight: 600; }
+
+/* Card */
+.card { background: var(--card); backdrop-filter: blur(16px); border: 1px solid var(--card-border); border-radius: 16px; padding: 24px; margin-bottom: 16px; position: relative; overflow: hidden; }
+.card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), var(--pink), transparent); }
+
+/* Input area */
+.input-group { margin-bottom: 16px; }
+.input-label { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+textarea { width: 100%; height: 80px; padding: 12px; border: 1px solid var(--card-border); border-radius: 10px; background: var(--input-bg); color: var(--text); font-size: 14px; font-family: inherit; resize: vertical; transition: border-color 0.2s; }
+textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,92,231,0.1); }
+textarea::placeholder { color: var(--text-dim); }
+
+/* Analyze button */
+.analyze-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 16px rgba(108,92,231,0.25); }
+.analyze-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(108,92,231,0.35); }
+.analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* Result */
+.result { display: none; }
+.result.show { display: block; }
+.score-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.score { font-size: 48px; font-weight: 800; background: linear-gradient(135deg, #a29bfe, #6c5ce7, #fd79a8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.verdict { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 2px; }
+.verdict-追 { background: rgba(0,184,148,0.1); color: var(--green); border: 1px solid rgba(0,184,148,0.2); }
+.verdict-看心情 { background: rgba(225,112,85,0.1); color: var(--yellow); border: 1px solid rgba(225,112,85,0.2); }
+.verdict-跳过 { background: rgba(214,48,49,0.08); color: var(--red); border: 1px solid rgba(214,48,49,0.15); }
+.item-name { font-size: 12px; color: var(--text-dim); margin-bottom: 12px; }
+.roast { font-size: 14px; line-height: 1.8; color: var(--text); margin-bottom: 16px; }
+.reasons { list-style: none; padding: 0; margin-bottom: 16px; }
+.reasons li { padding: 8px 12px; margin-bottom: 4px; background: var(--input-bg); border-radius: 8px; font-size: 12px; color: var(--text-dim); border-left: 3px solid var(--accent); }
+
+/* Action buttons */
+.action-row { display: flex; gap: 8px; }
+.action-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.action-btn:hover { transform: translateY(-1px); }
+.btn-accurate { background: rgba(0,184,148,0.06); color: var(--green); border-color: rgba(0,184,148,0.2); }
+.btn-inaccurate { background: rgba(214,48,49,0.04); color: var(--red); border-color: rgba(214,48,49,0.15); }
+
+/* Loading */
+.loading { display: none; text-align: center; padding: 24px; }
+.loading.show { display: block; }
+.orbit { position: relative; width: 60px; height: 60px; margin: 0 auto 16px; }
+.orbit-ring { position: absolute; inset: 0; border: 1.5px solid rgba(108,92,231,0.15); border-radius: 50%; }
+.orbit-ring:nth-child(1) { transform: rotateX(65deg); animation: orbit-spin 3s linear infinite; }
+.orbit-ring:nth-child(2) { transform: rotateX(65deg) rotateZ(60deg); animation: orbit-spin 4s linear infinite reverse; }
+.orbit-ring:nth-child(3) { transform: rotateX(65deg) rotateZ(120deg); animation: orbit-spin 5s linear infinite; }
+.orbit-dot { position: absolute; width: 5px; height: 5px; border-radius: 50%; top: -2.5px; left: 50%; margin-left: -2.5px; }
+.orbit-ring:nth-child(1) .orbit-dot { background: #6c5ce7; box-shadow: 0 0 6px #6c5ce7; }
+.orbit-ring:nth-child(2) .orbit-dot { background: #a29bfe; box-shadow: 0 0 6px #a29bfe; }
+.orbit-ring:nth-child(3) .orbit-dot { background: #fd79a8; box-shadow: 0 0 6px #fd79a8; }
+.orbit-core { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: linear-gradient(135deg, #6c5ce7, #fd79a8); box-shadow: 0 0 12px rgba(108,92,231,0.5); animation: core-pulse 2s ease-in-out infinite; }
+@keyframes orbit-spin { to { transform: rotateX(65deg) rotateZ(360deg); } }
+@keyframes core-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+.loading-text { font-size: 12px; color: var(--accent); letter-spacing: 1px; }
+.step-bar { width: 200px; height: 3px; background: var(--input-bg); border-radius: 2px; margin: 12px auto 0; overflow: hidden; }
+.step-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #6c5ce7, #a29bfe, #fd79a8); border-radius: 2px; transition: width 1s ease; }
+
+/* Radar page */
+#radar-chart { width: 100%; height: 320px; }
+.level-panel { padding: 16px; background: var(--input-bg); border-radius: 12px; text-align: center; }
+.level-title { font-size: 16px; font-weight: 700; color: var(--accent); margin-bottom: 8px; }
+.level-bar { width: 100%; height: 6px; background: var(--input-bg); border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+.level-fill { height: 100%; background: linear-gradient(90deg, #6c5ce7, #a29bfe, #fd79a8); border-radius: 3px; transition: width 0.4s; }
+.level-info { font-size: 11px; color: var(--text-dim); }
+
+/* Settings */
+.settings-form { display: flex; flex-direction: column; gap: 12px; }
+select, input[type="text"], input[type="password"] { width: 100%; padding: 11px 14px; background: var(--input-bg); border: 1px solid var(--card-border); border-radius: 10px; font-size: 14px; color: var(--text); font-family: inherit; appearance: none; cursor: pointer; }
+select:focus, input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(108,92,231,0.1); }
+select option { background: var(--card); color: var(--text); }
+.field-hint { font-size: 10px; color: var(--text-dim); font-family: monospace; }
+.save-btn { padding: 12px; background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.save-msg { font-size: 12px; text-align: center; color: var(--accent); min-height: 20px; }
+
+/* Theme toggle */
+.theme-toggle { position: fixed; top: 16px; right: 16px; width: 36px; height: 36px; border: 1px solid var(--card-border); background: var(--card); color: var(--accent); border-radius: 10px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+<button class="theme-toggle" onclick="toggleTheme()">🌓</button>
+<div class="container">
+  <div class="header">
+    <div class="logo">Vibe-Radar</div>
+    <div class="tagline">划词即鉴 · 你的审美雷达</div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn active" onclick="showTab('analyze')">鉴定</button>
+    <button class="nav-btn" onclick="showTab('radar')">雷达</button>
+    <button class="nav-btn" onclick="showTab('settings')">设置</button>
+  </div>
+
+  <!-- Analyze Tab -->
+  <div id="tab-analyze">
+    <div class="card">
+      <div class="input-group">
+        <div class="input-label">输入你想鉴定的内容</div>
+        <textarea id="text-input" placeholder="输入电影名、书名、游戏名，或粘贴任意文字..."></textarea>
+      </div>
+      <button class="analyze-btn" id="analyze-btn" onclick="analyze()">开始鉴定</button>
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="orbit">
+        <div class="orbit-ring"><div class="orbit-dot"></div></div>
+        <div class="orbit-ring"><div class="orbit-dot"></div></div>
+        <div class="orbit-ring"><div class="orbit-dot"></div></div>
+        <div class="orbit-core"></div>
+      </div>
+      <div class="loading-text" id="loading-text">正在联网搜索...</div>
+      <div class="step-bar"><div class="step-fill" id="step-fill"></div></div>
+    </div>
+
+    <div class="result card" id="result">
+      <div class="score-row">
+        <span class="score" id="r-score"></span>
+        <span class="verdict" id="r-verdict"></span>
+      </div>
+      <div class="item-name" id="r-item"></div>
+      <div class="roast" id="r-roast"></div>
+      <ul class="reasons" id="r-reasons"></ul>
+      <div class="action-row">
+        <button class="action-btn btn-accurate" onclick="sendAction('star')">👍 太准了吧</button>
+        <button class="action-btn btn-inaccurate" onclick="sendAction('bomb')">🤔 差点意思</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Radar Tab -->
+  <div id="tab-radar" style="display:none">
+    <div class="card">
+      <div id="radar-chart"></div>
+    </div>
+    <div class="card level-panel">
+      <div class="level-title" id="level-title"></div>
+      <div class="level-bar"><div class="level-fill" id="level-fill"></div></div>
+      <div class="level-info" id="level-info"></div>
+    </div>
+  </div>
+
+  <!-- Settings Tab -->
+  <div id="tab-settings" style="display:none">
+    <div class="card">
+      <div class="settings-form" id="settings-form">
+        <div class="input-label">模型厂商</div>
+        <select id="s-provider"></select>
+        <div class="input-label">API Key</div>
+        <input type="password" id="s-key" placeholder="sk-..." />
+        <div class="field-hint" id="s-key-hint"></div>
+        <div class="input-label">模型</div>
+        <select id="s-model"></select>
+        <div class="input-label">Base URL</div>
+        <input type="text" id="s-url" />
+        <button class="save-btn" onclick="saveSettings()">保存配置</button>
+        <div class="save-msg" id="s-msg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+const API = '/api/v1';
+let lastResult = null;
+
+// Theme
+function toggleTheme() {
+  document.body.classList.toggle('dark');
+  localStorage.setItem('vr_theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+}
+if (localStorage.getItem('vr_theme') === 'dark') document.body.classList.add('dark');
+
+// Tabs
+function showTab(name) {
+  ['analyze','radar','settings'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = t===name ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['analyze','radar','settings'][i]===name);
+  });
+  if (name === 'radar') loadRadar();
+  if (name === 'settings') loadSettings();
+}
+
+// Analyze via SSE
+async function analyze() {
+  const text = document.getElementById('text-input').value.trim();
+  if (!text) return;
+  const btn = document.getElementById('analyze-btn');
+  btn.disabled = true;
+  document.getElementById('result').classList.remove('show');
+  document.getElementById('loading').classList.add('show');
+
+  const steps = { searching: 15, identified: 55, judging: 75 };
+  try {
+    const r = await fetch(API + '/vibe/analyze-stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, domain: 'movie', context: { page_title: document.title }, hesitation_ms: 1000 }),
+    });
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '', event = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop() || '';
+      for (const line of lines) {
+        if (line.startsWith('event: ')) event = line.slice(7).trim();
+        else if (line.startsWith('data: ') && event) {
+          const data = JSON.parse(line.slice(6));
+          if (event === 'step') {
+            document.getElementById('step-fill').style.width = (steps[data.step]||50) + '%';
+            const labels = { searching: '正在联网搜索...', identified: '正在识别作品...', judging: '正在匹配分析...' };
+            document.getElementById('loading-text').textContent = labels[data.step] || '';
+          } else if (event === 'done') {
+            showResult(data);
+          } else if (event === 'error') {
+            alert(data.message || '分析失败');
+          }
+          event = '';
+        }
+      }
+    }
+  } catch (e) {
+    alert('后端未运行，请先启动 FastAPI');
+  }
+  document.getElementById('loading').classList.remove('show');
+  document.getElementById('step-fill').style.width = '0%';
+  btn.disabled = false;
+}
+
+function showResult(data) {
+  lastResult = data;
+  document.getElementById('r-score').textContent = data.match_score + '%';
+  const vEl = document.getElementById('r-verdict');
+  vEl.textContent = data.verdict;
+  vEl.className = 'verdict verdict-' + data.verdict;
+  document.getElementById('r-item').textContent = data.item_name || '';
+  // Typewriter
+  const roastEl = document.getElementById('r-roast');
+  roastEl.textContent = '';
+  const roast = data.roast || data.summary || '';
+  let i = 0;
+  const t = setInterval(() => { if (i < roast.length) roastEl.textContent += roast[i++]; else clearInterval(t); }, 20);
+  // Reasons
+  const ul = document.getElementById('r-reasons');
+  ul.innerHTML = '';
+  (data.reasons || []).forEach(r => { const li = document.createElement('li'); li.textContent = r; ul.appendChild(li); });
+  document.getElementById('result').classList.add('show');
+}
+
+// Action
+async function sendAction(action) {
+  if (!lastResult) return;
+  try {
+    await fetch(API + '/vibe/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action, matched_tag_ids: lastResult.matched_tags.map(t => t.tag_id),
+        text_hash: lastResult.text_hash, read_ms: 3000,
+        item_name: lastResult.item_name, domain: 'movie',
+        match_score: lastResult.match_score, verdict: lastResult.verdict,
+      }),
+    });
+    document.querySelectorAll('.action-btn').forEach(b => b.textContent = '✓ 收到');
+  } catch {}
+}
+
+// Radar
+async function loadRadar() {
+  try {
+    const r = await fetch(API + '/profile/radar');
+    const data = await r.json();
+    const chart = echarts.init(document.getElementById('radar-chart'), null, { renderer: 'canvas' });
+    const isDark = document.body.classList.contains('dark');
+    chart.setOption({
+      radar: {
+        indicator: data.dimensions.map(d => ({ name: d.category_label, max: 100 })),
+        radius: '65%',
+        axisName: { color: isDark ? '#c8c0ff' : '#666', fontSize: 12 },
+        splitArea: { show: true, areaStyle: { color: isDark ? ['rgba(108,92,231,0.06)','rgba(108,92,231,0.02)'] : ['#f8f7ff','#fff'] } },
+        splitLine: { lineStyle: { color: isDark ? 'rgba(108,92,231,0.15)' : 'rgba(108,92,231,0.1)' } },
+        axisLine: { lineStyle: { color: isDark ? 'rgba(108,92,231,0.2)' : 'rgba(108,92,231,0.15)' } },
+      },
+      series: [{ type: 'radar', data: [{ value: data.dimensions.map(d => d.score), areaStyle: { color: 'rgba(140,120,255,0.4)' }, lineStyle: { color: '#a29bfe', width: 2 }, itemStyle: { color: '#c8c0ff', borderColor: '#a29bfe', borderWidth: 2 } }] }],
+    });
+    document.getElementById('level-title').textContent = `${data.level_emoji} Lv.${data.level} ${data.level_title}`;
+    const pct = data.interaction_count / (data.next_level_at || 1) * 100;
+    document.getElementById('level-fill').style.width = Math.min(100, pct) + '%';
+    document.getElementById('level-info').textContent = `已喂入 ${data.interaction_count} 个信号 · 下一级还差 ${data.next_level_at - data.interaction_count} 次`;
+  } catch { document.getElementById('radar-chart').textContent = '无法加载雷达数据'; }
+}
+
+// Settings
+async function loadSettings() {
+  try {
+    const r = await fetch(API + '/settings/llm');
+    const cfg = await r.json();
+    const pSel = document.getElementById('s-provider');
+    const names = { deepseek:'DeepSeek', openai:'OpenAI (GPT)', anthropic:'Anthropic (Claude)', moonshot:'Moonshot (Kimi)', qwen:'通义千问', zhipu:'智谱 (GLM)', custom:'自定义' };
+    pSel.innerHTML = Object.keys(cfg.providers).map(k => `<option value="${k}" ${k===cfg.provider?'selected':''}>${names[k]||k}</option>`).join('');
+    document.getElementById('s-key-hint').textContent = '当前: ' + cfg.api_key_masked;
+    document.getElementById('s-url').value = cfg.base_url;
+    updateModels(cfg.providers, cfg.provider, cfg.model);
+    pSel.onchange = () => updateModels(cfg.providers, pSel.value, '');
+  } catch {}
+}
+function updateModels(providers, provider, current) {
+  const mSel = document.getElementById('s-model');
+  const models = providers[provider]?.models || [];
+  mSel.innerHTML = models.map(m => `<option value="${m}" ${m===current?'selected':''}>${m}</option>`).join('');
+  if (providers[provider]?.base_url) document.getElementById('s-url').value = providers[provider].base_url;
+}
+async function saveSettings() {
+  const msg = document.getElementById('s-msg');
+  msg.textContent = '保存中...';
+  try {
+    const r = await fetch(API + '/settings/llm', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider: document.getElementById('s-provider').value,
+        api_key: document.getElementById('s-key').value || '',
+        model: document.getElementById('s-model').value,
+        base_url: document.getElementById('s-url').value,
+      }),
+    });
+    const result = await r.json();
+    msg.textContent = '✓ 已保存';
+    msg.style.color = 'var(--green)';
+    document.getElementById('s-key-hint').textContent = '当前: ' + result.api_key_masked;
+  } catch { msg.textContent = '保存失败'; msg.style.color = 'var(--red)'; }
+}
+</script>
+</body>
+</html>

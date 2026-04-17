@@ -24,9 +24,9 @@ function ensureShadow(): ShadowRoot {
   root.appendChild(style);
   document.body.appendChild(host);
   shadowRoot = root;
-  // Apply saved theme
+  // Apply saved theme (default: light)
   chrome.storage.local.get("vr_theme").then(({ vr_theme }) => {
-    if (vr_theme === "light") host.classList.add("vr-light");
+    if (vr_theme !== "dark") host.classList.add("vr-light");
   });
   return root;
 }

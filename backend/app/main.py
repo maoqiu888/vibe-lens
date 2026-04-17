@@ -1,9 +1,12 @@
 import asyncio
 import logging
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.routers import personality, profile, settings, vibe
 from app.services.feedback_analyzer import process_pending_feedback
@@ -39,6 +42,13 @@ app.include_router(vibe.router)
 app.include_router(profile.router)
 app.include_router(personality.router)
 app.include_router(settings.router)
+
+STATIC_DIR = Path(__file__).parent / "static"
+
+
+@app.get("/")
+async def index():
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 FEEDBACK_INTERVAL_SECONDS = 300  # 5 minutes
