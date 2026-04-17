@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import Awaitable, Callable
 
 import httpx
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 from sqlalchemy import select
 
 from app import database
