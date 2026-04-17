@@ -240,3 +240,25 @@ async def test_all_tags_invalid_raises():
     }))
     with pytest.raises(llm_identifier.LlmParseError):
         await llm_identifier.identify("text", "book", llm_call=fake)
+
+
+async def test_domain_enforcement_corrects_genre_conflict():
+    """If user is on movie page but LLM returns '科幻小说', genre gets corrected."""
+    seed_all()
+    fake = FakeLLM(response=_make_response(
+        item_profile={
+            "item_name": "《挽救计划》",
+            "item_name_alt": "Project Hail Mary",
+            "year": 2021,
+            "creator": "Andy Weir",
+            "genre": "科幻小说",
+            "plot_gist": "宇航员独自拯救地球。",
+            "tone": "乐观幽默",
+            "name_vs_reality": "",
+            "confidence": "high",
+        },
+        tags=[{"tag_id": 11, "weight": 0.9}],
+    ))
+    result = await llm_identifier.identify("挽救计划", "movie", llm_call=fake)
+    assert "电影" in result["item_profile"]["genre"]
+    assert result["item_profile"]["confidence"] == "medium"

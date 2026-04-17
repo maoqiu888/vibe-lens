@@ -50,8 +50,7 @@ function showPersonalityPrompt(parent: HTMLElement) {
 
   goBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    const popupUrl = chrome.runtime.getURL("popup/popup.html");
-    window.open(popupUrl, "_blank", "width=400,height=600");
+    chrome.runtime.sendMessage({ type: "OPEN_PERSONALITY" });
     card.remove();
     clearUi();
   });
@@ -77,7 +76,7 @@ async function onIconClick(text: string, domain: Domain) {
     return;
   }
 
-  // Show loading state inside the icon's wrap
+  // Show stepped loading animation
   const loading = document.createElement("div");
   loading.className = "vr-card vr-loading";
   loading.innerHTML = `
@@ -87,9 +86,34 @@ async function onIconClick(text: string, domain: Domain) {
       <div class="vr-ping-ring"></div>
       <div class="vr-ping-core"></div>
     </div>
-    <div class="vr-loading-text">正在读取你的审美指纹<span class="vr-loading-dots"></span></div>
+    <div class="vr-loading-text"><span class="vr-step-text">正在联网搜索</span><span class="vr-loading-dots"></span></div>
+    <div class="vr-step-bar"><div class="vr-step-fill"></div></div>
+    <div class="vr-step-labels">
+      <span class="vr-step-label active">搜索</span>
+      <span class="vr-step-label">识别</span>
+      <span class="vr-step-label">分析</span>
+    </div>
     <div class="vr-shimmer-bar"></div>
   `;
+
+  const steps = [
+    { text: "正在联网搜索", pct: 20, delay: 0 },
+    { text: "正在识别作品", pct: 50, delay: 1500 },
+    { text: "正在匹配分析", pct: 80, delay: 3500 },
+  ];
+  const stepText = loading.querySelector(".vr-step-text") as HTMLElement;
+  const stepFill = loading.querySelector(".vr-step-fill") as HTMLElement;
+  const stepLabels = loading.querySelectorAll(".vr-step-label");
+  const stepTimers: number[] = [];
+
+  for (let i = 0; i < steps.length; i++) {
+    const timer = window.setTimeout(() => {
+      stepText.textContent = steps[i].text;
+      stepFill.style.width = `${steps[i].pct}%`;
+      stepLabels.forEach((l, j) => l.classList.toggle("active", j <= i));
+    }, steps[i].delay);
+    stepTimers.push(timer);
+  }
   currentIcon.appendChild(loading);
 
   const hesitationMs = iconShownAt !== null
@@ -109,6 +133,8 @@ async function onIconClick(text: string, domain: Domain) {
 
   try {
     const result = await send<AnalyzeResult>(msg);
+    stepTimers.forEach(clearTimeout);
+    stepFill.style.width = "100%";
     loading.remove();
 
     if (result.level_up) {
@@ -137,6 +163,7 @@ async function onIconClick(text: string, domain: Domain) {
       });
     }
   } catch (e: any) {
+    stepTimers.forEach(clearTimeout);
     loading.className = "vr-card vr-error";
     loading.textContent = e?.message?.startsWith("BACKEND_DOWN")
       ? "后端未运行，请先启动 FastAPI"

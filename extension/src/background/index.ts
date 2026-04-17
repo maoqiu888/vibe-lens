@@ -62,10 +62,15 @@ async function routeApi(msg: Msg): Promise<unknown> {
 }
 
 chrome.runtime.onMessage.addListener(
-  (msg: Msg, _sender, sendResponse: (r: MsgResponse<unknown>) => void) => {
+  (msg: any, _sender, sendResponse: (r: MsgResponse<unknown>) => void) => {
+    if (msg.type === "OPEN_PERSONALITY") {
+      const url = chrome.runtime.getURL("popup/popup.html");
+      chrome.tabs.create({ url });
+      return false;
+    }
     (async () => {
       try {
-        const data = await routeApi(msg);
+        const data = await routeApi(msg as Msg);
         sendResponse({ ok: true, data });
       } catch (e: any) {
         sendResponse({

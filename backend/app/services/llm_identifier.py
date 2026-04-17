@@ -118,6 +118,37 @@ def _load_tag_pool() -> list[dict]:
         db.close()
 
 
+_DOMAIN_CONFLICT_KEYWORDS = {
+    "movie": {"小说", "书籍", "图书", "文学", "长篇", "短篇"},
+    "book": {"电影", "院线", "票房", "导演执导"},
+    "game": {"电影", "小说", "书籍"},
+    "music": {"电影", "小说", "书籍", "游戏"},
+}
+
+_DOMAIN_GENRE_LABEL = {
+    "movie": "电影", "book": "书籍", "game": "游戏", "music": "音乐",
+}
+
+
+def _enforce_domain(profile: dict, domain: str) -> dict:
+    """Post-process: if genre contradicts the user's domain, force-correct."""
+    genre = (profile.get("genre") or "").lower()
+    conflict_words = _DOMAIN_CONFLICT_KEYWORDS.get(domain, set())
+    for word in conflict_words:
+        if word in genre:
+            domain_label = _DOMAIN_GENRE_LABEL.get(domain, domain)
+            old_genre = profile["genre"]
+            profile["genre"] = f"{domain_label}（原识别：{old_genre}）"
+            if profile.get("confidence") == "high":
+                profile["confidence"] = "medium"
+            logger.warning(
+                "DOMAIN ENFORCE | domain=%s conflicts with genre=%r → corrected",
+                domain, old_genre,
+            )
+            break
+    return profile
+
+
 def _fill_profile_defaults(raw_profile: dict, text: str) -> dict:
     """Fill missing item_profile fields with sensible defaults."""
     profile = dict(_ITEM_PROFILE_DEFAULTS)  # start with defaults
@@ -244,6 +275,7 @@ async def identify(
             raise LlmParseError(f"invalid LLM response: {e}") from e
 
         item_profile = _fill_profile_defaults(raw_profile, text)
+        item_profile = _enforce_domain(item_profile, domain)
 
         valid = [
             {"tag_id": t["tag_id"], "weight": float(t["weight"])}
