@@ -1,4 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+import json
+from typing import AsyncGenerator
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -122,6 +126,122 @@ async def analyze(
         next_level_at=info["next_level_at"],
         level_up=level_up,
         ui_stage=ui_stage,
+    )
+
+
+def _sse_event(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+@router.post("/analyze-stream")
+async def analyze_stream(
+    payload: AnalyzeRequest,
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id),
+):
+    async def event_generator() -> AsyncGenerator[str, None]:
+        # Phase 1: Identify
+        yield _sse_event("step", {"step": "searching", "progress": 10})
+        page_title = payload.context.page_title if payload.context else None
+        try:
+            identification = await llm_identifier.identify(
+                payload.text, payload.domain, page_title=page_title,
+                exclude_items=payload.exclude_items or None,
+            )
+        except (llm_identifier.LlmParseError, llm_identifier.LlmTimeoutError) as e:
+            yield _sse_event("error", {"code": "LLM_FAIL", "message": str(e)})
+            return
+
+        item_profile = identification["item_profile"]
+        matched_tags = identification["matched_tags"]
+        matched_tag_ids = [t["tag_id"] for t in matched_tags]
+        item_tags = [(t["tag_id"], t["weight"]) for t in matched_tags]
+
+        yield _sse_event("step", {"step": "identified", "progress": 50})
+
+        # Phase 2: Cosine score (instant)
+        user = db.scalar(select(User).where(User.id == user_id))
+        is_first = (user is None) or (user.interaction_count == 0)
+        base_score = profile_calc.compute_match_score(user_id=user_id, item_tags=item_tags)
+
+        # Send early result: item_name + base_score + tags
+        yield _sse_event("identified", {
+            "item_name": item_profile.get("item_name", ""),
+            "summary": identification["summary"],
+            "matched_tags": matched_tags,
+            "text_hash": identification["text_hash"],
+            "cache_hit": identification["cache_hit"],
+            "base_score": base_score,
+        })
+
+        # Phase 3: Judge (the slow part)
+        yield _sse_event("step", {"step": "judging", "progress": 70})
+
+        user_personality = db.scalar(
+            select(UserPersonality).where(UserPersonality.user_id == user_id)
+        )
+        if user_personality and user_personality.summary:
+            user_taste_hint = user_personality.summary
+        else:
+            user_taste_descriptions = profile_calc.get_top_core_tag_descriptions(
+                user_id=user_id, n=2
+            )
+            user_taste_hint = "；".join(user_taste_descriptions)
+
+        user_top_descriptions = profile_calc.get_top_core_tag_descriptions(
+            user_id=user_id, n=2
+        )
+
+        judge_result = await llm_judge.judge(
+            text=payload.text,
+            domain=payload.domain,
+            item_profile=item_profile,
+            base_score=base_score,
+            user_personality_summary=user_taste_hint,
+            user_top_tag_descriptions=user_top_descriptions,
+        )
+
+        # Profile update + level
+        if is_first:
+            profile_calc.apply_core_delta(
+                user_id=user_id, tag_ids=matched_tag_ids,
+                delta=FIRST_IMPRESSION_DELTA, action="first_impression",
+            )
+        else:
+            curiosity_delta = profile_calc.dynamic_curiosity_delta(payload.hesitation_ms)
+            profile_calc.apply_curiosity_delta(
+                user_id=user_id, tag_ids=matched_tag_ids,
+                delta=curiosity_delta, action="analyze",
+            )
+
+        new_count, new_level, level_up = profile_calc.increment_interaction(user_id)
+        info = profile_calc.level_info(new_count)
+        ui_stage = profile_calc.compute_ui_stage(new_level)
+
+        # Send complete result
+        yield _sse_event("done", {
+            "match_score": judge_result["final_score"],
+            "item_name": item_profile.get("item_name", ""),
+            "summary": identification["summary"],
+            "roast": judge_result["roast"],
+            "verdict": judge_result["verdict"],
+            "reasons": judge_result["reasons"],
+            "matched_tags": matched_tags,
+            "text_hash": identification["text_hash"],
+            "cache_hit": identification["cache_hit"],
+            "interaction_count": new_count,
+            "level": new_level,
+            "level_title": info["title"],
+            "level_emoji": info["emoji"],
+            "next_level_at": info["next_level_at"],
+            "level_up": level_up,
+            "ui_stage": ui_stage,
+        })
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
 

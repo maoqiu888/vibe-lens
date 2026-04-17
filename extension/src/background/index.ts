@@ -81,6 +81,59 @@ async function syncPersonalityFlag() {
 }
 syncPersonalityFlag();
 
+// SSE streaming for analyze
+async function handleAnalyzeStream(port: chrome.runtime.Port, payload: any) {
+  try {
+    const r = await fetch(`${API_BASE}/vibe/analyze-stream`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: payload.text,
+        domain: payload.domain,
+        context: { page_title: payload.pageTitle, page_url: payload.pageUrl },
+        hesitation_ms: payload.hesitationMs,
+        exclude_items: payload.excludeItems || [],
+      }),
+    });
+    if (!r.ok || !r.body) {
+      port.postMessage({ event: "error", data: { code: "HTTP_ERROR", message: `${r.status}` } });
+      return;
+    }
+    const reader = r.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      let currentEvent = "";
+      for (const line of lines) {
+        if (line.startsWith("event: ")) {
+          currentEvent = line.slice(7).trim();
+        } else if (line.startsWith("data: ") && currentEvent) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            port.postMessage({ event: currentEvent, data });
+          } catch { /* skip bad json */ }
+          currentEvent = "";
+        }
+      }
+    }
+  } catch (e: any) {
+    port.postMessage({ event: "error", data: { code: "BACKEND_DOWN", message: e?.message || "unknown" } });
+  }
+}
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === "analyze-stream") {
+    port.onMessage.addListener((msg) => {
+      handleAnalyzeStream(port, msg.payload);
+    });
+  }
+});
+
 chrome.runtime.onMessage.addListener(
   (msg: any, _sender, sendResponse: (r: MsgResponse<unknown>) => void) => {
     if (msg.type === "OPEN_PERSONALITY") {

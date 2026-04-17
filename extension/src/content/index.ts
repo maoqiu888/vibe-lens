@@ -129,113 +129,191 @@ async function onIconClick(text: string, domain: Domain, excludeItems?: string[]
     }
   }
 
-  // Show stepped loading animation
-  const loading = document.createElement("div");
-  loading.className = "vr-card vr-loading";
-  loading.innerHTML = `
-    <div class="vr-ping">
-      <div class="vr-ping-ring"></div>
-      <div class="vr-ping-ring"></div>
-      <div class="vr-ping-ring"></div>
-      <div class="vr-ping-core"></div>
+  // SSE streaming card
+  const card = document.createElement("div");
+  card.className = "vr-card vr-stream-card";
+  card.innerHTML = `
+    <div class="vr-stream-step">
+      <div class="vr-step-bar"><div class="vr-step-fill"></div></div>
+      <div class="vr-step-labels">
+        <span class="vr-step-label active">搜索</span>
+        <span class="vr-step-label">识别</span>
+        <span class="vr-step-label">分析</span>
+      </div>
     </div>
-    <div class="vr-loading-text"><span class="vr-step-text">正在联网搜索</span><span class="vr-loading-dots"></span></div>
-    <div class="vr-step-bar"><div class="vr-step-fill"></div></div>
-    <div class="vr-step-labels">
-      <span class="vr-step-label active">搜索</span>
-      <span class="vr-step-label">识别</span>
-      <span class="vr-step-label">分析</span>
-    </div>
-    <div class="vr-shimmer-bar"></div>
+    <div class="vr-stream-score" style="display:none"></div>
+    <div class="vr-stream-verdict" style="display:none"></div>
+    <div class="vr-stream-roast" style="display:none"></div>
+    <div class="vr-stream-actions" style="display:none"></div>
   `;
+  currentIcon.appendChild(card);
+  currentCard = card;
 
-  const steps = [
-    { text: "正在联网搜索", pct: 20, delay: 0 },
-    { text: "正在识别作品", pct: 50, delay: 1500 },
-    { text: "正在匹配分析", pct: 80, delay: 3500 },
-  ];
-  const stepText = loading.querySelector(".vr-step-text") as HTMLElement;
-  const stepFill = loading.querySelector(".vr-step-fill") as HTMLElement;
-  const stepLabels = loading.querySelectorAll(".vr-step-label");
-  const stepTimers: number[] = [];
+  const stepFill = card.querySelector(".vr-step-fill") as HTMLElement;
+  const stepLabels = card.querySelectorAll(".vr-step-label");
+  const scoreEl = card.querySelector(".vr-stream-score") as HTMLElement;
+  const verdictEl = card.querySelector(".vr-stream-verdict") as HTMLElement;
+  const roastEl = card.querySelector(".vr-stream-roast") as HTMLElement;
 
-  for (let i = 0; i < steps.length; i++) {
-    const timer = window.setTimeout(() => {
-      stepText.textContent = steps[i].text;
-      stepFill.style.width = `${steps[i].pct}%`;
-      stepLabels.forEach((l, j) => l.classList.toggle("active", j <= i));
-    }, steps[i].delay);
-    stepTimers.push(timer);
-  }
-  currentIcon.appendChild(loading);
+  const STEP_MAP: Record<string, { pct: number; labels: number }> = {
+    searching: { pct: 15, labels: 0 },
+    identified: { pct: 55, labels: 1 },
+    judging: { pct: 75, labels: 2 },
+  };
 
   const hesitationMs = iconShownAt !== null
     ? Math.max(0, Math.round(performance.now() - iconShownAt))
     : null;
 
-  const msg: Msg = {
-    type: "ANALYZE",
+  const port = chrome.runtime.connect({ name: "analyze-stream" });
+  let finalResult: AnalyzeResult | null = null;
+
+  port.onMessage.addListener((msg: { event: string; data: any }) => {
+    if (msg.event === "step") {
+      const s = STEP_MAP[msg.data.step];
+      if (s) {
+        stepFill.style.width = `${s.pct}%`;
+        stepLabels.forEach((l, j) => l.classList.toggle("active", j <= s.labels));
+      }
+    } else if (msg.event === "identified") {
+      // Show score immediately (base_score, will be updated by done)
+      scoreEl.style.display = "";
+      scoreEl.innerHTML = `<span class="vr-score">${msg.data.base_score}%</span>`;
+      scoreEl.querySelector(".vr-score")!.className = "vr-score";
+    } else if (msg.event === "done") {
+      finalResult = msg.data as AnalyzeResult;
+      stepFill.style.width = "100%";
+
+      // Hide progress bar
+      const stepSection = card.querySelector(".vr-stream-step") as HTMLElement;
+      stepSection.style.display = "none";
+
+      // Update score to final
+      scoreEl.innerHTML = `<span class="vr-score">${finalResult.match_score}%</span>`;
+
+      // Show verdict badge
+      const v = finalResult.verdict || "看心情";
+      const colorClass = v === "追" ? "vr-verdict-green" : v === "跳过" ? "vr-verdict-red" : "vr-verdict-yellow";
+      verdictEl.style.display = "";
+      verdictEl.innerHTML = `<div class="vr-verdict-badge ${colorClass}">${v}</div>`;
+
+      // Typewriter roast
+      const roastText = finalResult.roast || finalResult.summary || "";
+      roastEl.style.display = "";
+      roastEl.className = "vr-roast vr-stream-roast";
+      roastEl.textContent = "";
+      let i = 0;
+      const typeTimer = setInterval(() => {
+        if (i < roastText.length) {
+          roastEl.textContent += roastText[i];
+          i++;
+        } else {
+          clearInterval(typeTimer);
+          showStreamActions(card, finalResult!, text, domain, excludeItems);
+        }
+      }, 25);
+
+      // Cache result
+      const cacheKey = `vr_cache_${text}_${domain}`;
+      chrome.storage.local.set({ [cacheKey]: finalResult });
+    } else if (msg.event === "error") {
+      card.className = "vr-card vr-error";
+      card.textContent = msg.data.code === "BACKEND_DOWN"
+        ? "后端未运行，请先启动 FastAPI"
+        : `鉴定失败: ${msg.data.message ?? "未知错误"}`;
+      setTimeout(clearUi, 3000);
+    }
+  });
+
+  port.postMessage({
     payload: {
-      text,
-      domain,
+      text, domain,
       pageTitle: document.title,
       pageUrl: location.href,
       hesitationMs,
       excludeItems: excludeItems || undefined,
     },
-  };
+  });
+}
 
-  try {
-    const result = await send<AnalyzeResult>(msg);
-    stepTimers.forEach(clearTimeout);
-    stepFill.style.width = "100%";
-    loading.remove();
+function showStreamActions(
+  card: HTMLElement,
+  result: AnalyzeResult,
+  text: string,
+  domain: Domain,
+  excludeItems?: string[],
+) {
+  const cardShownAt = performance.now();
+  const actions = document.createElement("div");
+  actions.className = "vr-actions";
 
-    // Cache result for instant replay
-    const cacheKey = `vr_cache_${text}_${domain}`;
-    chrome.storage.local.set({ [cacheKey]: result });
+  const star = document.createElement("button");
+  star.className = "vr-btn star";
+  star.textContent = "👍 太准了吧";
+  star.addEventListener("click", async () => {
+    const readMs = Math.max(0, Math.round(performance.now() - cardShownAt));
+    try {
+      await send({ type: "ACTION", payload: {
+        action: "star" as const, matchedTagIds: result.matched_tags.map(t => t.tag_id),
+        textHash: result.text_hash, readMs, itemName: result.item_name,
+        domain, matchScore: result.match_score, verdict: result.verdict,
+      }} as any);
+      star.textContent = "✓ 收到反馈";
+      setTimeout(clearUi, 1500);
+    } catch { star.textContent = "提交失败"; setTimeout(clearUi, 1500); }
+  });
 
-    const retryHandler = (newExcludes: string[]) => {
+  const bomb = document.createElement("button");
+  bomb.className = "vr-btn bomb";
+  bomb.textContent = "🤔 差点意思";
+  bomb.addEventListener("click", async () => {
+    const readMs = Math.max(0, Math.round(performance.now() - cardShownAt));
+    try {
+      await send({ type: "ACTION", payload: {
+        action: "bomb" as const, matchedTagIds: result.matched_tags.map(t => t.tag_id),
+        textHash: result.text_hash, readMs, itemName: result.item_name,
+        domain, matchScore: result.match_score, verdict: result.verdict,
+      }} as any);
+      bomb.textContent = "✓ 收到反馈";
+      setTimeout(clearUi, 1500);
+    } catch { bomb.textContent = "提交失败"; setTimeout(clearUi, 1500); }
+  });
+
+  actions.appendChild(star);
+  actions.appendChild(bomb);
+  card.appendChild(actions);
+
+  // Recommend link
+  const recommendLink = document.createElement("a");
+  recommendLink.className = "vr-recommend-link";
+  recommendLink.textContent = "> 寻找同频代餐";
+  recommendLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    recommendLink.style.display = "none";
+    renderRecommendCard({
+      parent: card, text, sourceDomain: domain,
+      matchedTagIds: result.matched_tags.map(t => t.tag_id),
+    });
+  });
+  card.appendChild(recommendLink);
+
+  // Retry link
+  if (result.item_name) {
+    const retryLink = document.createElement("a");
+    retryLink.className = "vr-retry-link";
+    retryLink.textContent = "✕ 不是这个，重新识别";
+    retryLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const cacheKey = `vr_cache_${text}_${domain}`;
       chrome.storage.local.remove(cacheKey);
-      const allExcludes = [...(excludeItems || []), ...newExcludes];
+      const allExcludes = [...(excludeItems || []), result.item_name];
       currentCard?.remove();
       currentCard = null;
       onIconClick(text, domain, allExcludes);
-    };
-
-    if (result.level_up) {
-      const tempCard = document.createElement("div");
-      tempCard.className = "vr-card";
-      currentIcon.appendChild(tempCard);
-      playLevelUpAnimation(tempCard, result, () => {
-        tempCard.remove();
-        if (!currentIcon) return;
-        currentCard = renderVibeCard({
-          parent: currentIcon,
-          result,
-          sourceDomain: domain,
-          text,
-          onClose: clearUi,
-          onRetry: retryHandler,
-        });
-      });
-    } else {
-      currentCard = renderVibeCard({
-        parent: currentIcon,
-        result,
-        sourceDomain: domain,
-        text,
-        onClose: clearUi,
-        onRetry: retryHandler,
-      });
-    }
-  } catch (e: any) {
-    stepTimers.forEach(clearTimeout);
-    loading.className = "vr-card vr-error";
-    loading.textContent = e?.message?.startsWith("BACKEND_DOWN")
-      ? "后端未运行，请先启动 FastAPI"
-      : `鉴定失败: ${e?.message ?? "未知错误"}`;
-    setTimeout(clearUi, 3000);
+    });
+    card.appendChild(retryLink);
   }
 }
 

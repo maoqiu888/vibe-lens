@@ -185,6 +185,14 @@
   100% { content: ""; }
 }
 
+/* V1.5 stream card */
+.vr-stream-card {
+  min-height: 80px;
+}
+.vr-stream-step {
+  margin-bottom: 8px;
+}
+
 /* V1.5 stepped loading progress */
 .vr-step-bar {
   width: 100%;
