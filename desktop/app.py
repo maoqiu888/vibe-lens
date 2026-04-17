@@ -15,7 +15,6 @@ import httpx
 from pynput import keyboard
 
 API = "http://localhost:8000/api/v1"
-HOTKEY = {keyboard.Key.ctrl_l, keyboard.Key.shift, keyboard.Key.space}
 
 # ═══════ Backend Management ═══════
 backend_proc = None
@@ -255,19 +254,7 @@ class ResultWindow:
 
 
 # ═══════ Global Hotkey ═══════
-current_keys = set()
 win = ResultWindow()
-
-
-def on_press(key):
-    current_keys.add(key)
-    if HOTKEY.issubset(current_keys):
-        current_keys.clear()
-        threading.Thread(target=handle_hotkey, daemon=True).start()
-
-
-def on_release(key):
-    current_keys.discard(key)
 
 
 def handle_hotkey():
@@ -340,10 +327,14 @@ def main():
     print("系统托盘图标已运行，右键可退出")
     print()
 
-    # Start hotkey listener
-    listener = keyboard.Listener(on_press=on_press, on_release=on_release)
-    listener.daemon = True
-    listener.start()
+    # Start hotkey listener (Ctrl+Shift+Space)
+    def on_hotkey():
+        threading.Thread(target=handle_hotkey, daemon=True).start()
+
+    hotkey = keyboard.GlobalHotKeys({"<ctrl>+<shift>+<space>": on_hotkey})
+    hotkey.daemon = True
+    hotkey.start()
+    print("✓ 快捷键监听已启动 (Ctrl+Shift+Space)")
 
     # Start tray icon (blocks)
     tray = create_tray()
