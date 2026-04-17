@@ -41,9 +41,9 @@ export async function renderRadar(root: HTMLElement, data: RadarResult): Promise
           {
             value: data.dimensions.map((d) => d.score),
             name: "当前画像",
-            areaStyle: { color: "rgba(108, 92, 231, 0.3)" },
-            lineStyle: { color: "#6c5ce7" },
-            itemStyle: { color: "#6c5ce7" },
+            areaStyle: { color: "rgba(140, 120, 255, 0.45)" },
+            lineStyle: { color: "#a29bfe", width: 2 },
+            itemStyle: { color: "#c8c0ff", borderColor: "#a29bfe", borderWidth: 2 },
           },
         ],
       },
