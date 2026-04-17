@@ -1,3 +1,4 @@
+import httpx
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -5,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.deps import get_db
 from app.models.llm_config import LlmConfig
+from app.services.llm_config_reader import get_llm_settings
 
 router = APIRouter(prefix="/api/v1/settings", tags=["settings"])
 
@@ -86,3 +88,41 @@ def update_llm_config(
         base_url=config.base_url,
         providers=PROVIDERS,
     )
+
+
+class TestResult(BaseModel):
+    ok: bool
+    message: str
+    model: str = ""
+    latency_ms: int = 0
+
+
+@router.post("/llm/test", response_model=TestResult)
+async def test_llm_connection():
+    """Send a simple request to verify LLM API is working."""
+    cfg = get_llm_settings()
+    if not cfg["api_key"] or cfg["api_key"] == "sk-replace-me":
+        return TestResult(ok=False, message="API Key 未配置")
+
+    import time
+    start = time.time()
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.post(
+                f"{cfg['base_url']}/chat/completions",
+                json={
+                    "model": cfg["model"],
+                    "messages": [{"role": "user", "content": "say hi"}],
+                    "max_tokens": 10,
+                },
+                headers={"Authorization": f"Bearer {cfg['api_key']}"},
+            )
+            latency = int((time.time() - start) * 1000)
+            if r.status_code == 200:
+                return TestResult(ok=True, message="连接成功", model=cfg["model"], latency_ms=latency)
+            body = r.text[:200]
+            return TestResult(ok=False, message=f"HTTP {r.status_code}: {body}", latency_ms=latency)
+    except httpx.TimeoutException:
+        return TestResult(ok=False, message="连接超时 (15秒)")
+    except Exception as e:
+        return TestResult(ok=False, message=str(e)[:200])

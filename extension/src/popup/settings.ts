@@ -66,7 +66,10 @@ export async function renderSettings(root: HTMLElement, onBack: () => void): Pro
     <label class="vr-field-label">Base URL</label>
     <input type="text" id="base-url-input" class="vr-input" value="${config.base_url}" />
 
-    <button class="vr-btn vr-btn-primary" id="save-btn">保存配置</button>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="vr-btn vr-btn-primary" id="save-btn" style="flex:1">保存配置</button>
+      <button class="vr-btn vr-btn-secondary" id="test-btn" style="flex:1">测试连接</button>
+    </div>
     <div class="vr-settings-msg" id="settings-msg"></div>
   `;
 
@@ -120,5 +123,27 @@ export async function renderSettings(root: HTMLElement, onBack: () => void): Pro
       msg.style.color = "#d63031";
     }
     saveBtn.disabled = false;
+  });
+
+  const testBtn = form.querySelector("#test-btn") as HTMLButtonElement;
+  testBtn.addEventListener("click", async () => {
+    testBtn.disabled = true;
+    msg.textContent = "测试中...";
+    msg.style.color = "";
+    try {
+      const r = await fetch(`${API_BASE}/settings/llm/test`, { method: "POST" });
+      const result = await r.json();
+      if (result.ok) {
+        msg.textContent = `✓ ${result.message} · ${result.model} · ${result.latency_ms}ms`;
+        msg.style.color = "#2d8c2d";
+      } else {
+        msg.textContent = `✗ ${result.message}`;
+        msg.style.color = "#d63031";
+      }
+    } catch (e: any) {
+      msg.textContent = `✗ 后端未运行`;
+      msg.style.color = "#d63031";
+    }
+    testBtn.disabled = false;
   });
 }

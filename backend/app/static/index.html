@@ -213,7 +213,10 @@ select option { background: var(--card); color: var(--text); }
         <select id="s-model"></select>
         <div class="input-label">Base URL</div>
         <input type="text" id="s-url" />
-        <button class="save-btn" onclick="saveSettings()">保存配置</button>
+        <div style="display:flex;gap:8px">
+          <button class="save-btn" onclick="saveSettings()" style="flex:1">保存配置</button>
+          <button class="save-btn" onclick="testLLM()" id="test-btn" style="flex:1;background:linear-gradient(135deg,#00b894,#55efc4)">测试连接</button>
+        </div>
         <div class="save-msg" id="s-msg"></div>
       </div>
     </div>
@@ -396,6 +399,25 @@ async function saveSettings() {
     msg.style.color = 'var(--green)';
     document.getElementById('s-key-hint').textContent = '当前: ' + result.api_key_masked;
   } catch { msg.textContent = '保存失败'; msg.style.color = 'var(--red)'; }
+}
+async function testLLM() {
+  const msg = document.getElementById('s-msg');
+  const btn = document.getElementById('test-btn');
+  btn.disabled = true;
+  msg.textContent = '测试中...';
+  msg.style.color = '';
+  try {
+    const r = await fetch(API + '/settings/llm/test', { method: 'POST' });
+    const result = await r.json();
+    if (result.ok) {
+      msg.textContent = '✓ ' + result.message + ' · ' + result.model + ' · ' + result.latency_ms + 'ms';
+      msg.style.color = 'var(--green)';
+    } else {
+      msg.textContent = '✗ ' + result.message;
+      msg.style.color = 'var(--red)';
+    }
+  } catch { msg.textContent = '✗ 后端未运行'; msg.style.color = 'var(--red)'; }
+  btn.disabled = false;
 }
 </script>
 </body>
