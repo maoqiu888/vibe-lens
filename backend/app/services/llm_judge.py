@@ -186,9 +186,10 @@ async def judge(
     if not isinstance(roast, str):
         roast = ""
 
-    # Post-process: replace any wrong percentage with the actual final_score
+    # Post-process: replace any wrong score with the actual final_score
     if roast:
         roast = re.sub(r'-?\d{1,3}%', f'{final_score}%', roast)
+        roast = re.sub(r'分数?-?\d{1,3}分', f'{final_score}分', roast)
 
     logger.info(
         "JUDGE OUTPUT | final=%d | verdict=%s | roast=%s",
