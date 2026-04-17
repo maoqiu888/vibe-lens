@@ -587,6 +587,38 @@
   background: rgba(108, 92, 231, 0.05); border-radius: 8px;
 }
 
+/* ═══════════ Domain Picker ═══════════ */
+.vr-domain-picker {
+  padding: 16px;
+  text-align: center;
+}
+.vr-picker-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vr-accent);
+  margin-bottom: 12px;
+}
+.vr-picker-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.vr-picker-btn {
+  padding: 12px 8px;
+  background: var(--vr-accent-bg);
+  border: 1px solid var(--vr-accent-border);
+  border-radius: 10px;
+  color: var(--vr-text);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.vr-picker-btn:hover {
+  border-color: var(--vr-accent);
+  background: var(--vr-input-bg);
+  transform: translateY(-1px);
+}
+
 /* ═══════════ Tags ═══════════ */
 .vr-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
 .vr-tag {

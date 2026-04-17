@@ -1,7 +1,7 @@
 import { send } from "../shared/api";
 import { MAX_TEXT_LEN, MIN_TEXT_LEN } from "../shared/constants";
 import type { AnalyzeResult, Domain, Msg } from "../shared/types";
-import { detectDomain } from "./domain";
+import { detectDomain, isKnownSite } from "./domain";
 import { renderFloatingIcon } from "./ui/FloatingIcon";
 import { playLevelUpAnimation } from "./ui/LevelUpOverlay";
 import { renderRecommendCard } from "./ui/RecommendCard";
@@ -341,6 +341,30 @@ function showStreamActions(
   card.appendChild(toolbar);
 }
 
+function showDomainPicker(parent: HTMLElement, text: string) {
+  const card = document.createElement("div");
+  card.className = "vr-card vr-domain-picker";
+  card.innerHTML = `
+    <div class="vr-picker-title">这是什么类型？</div>
+    <div class="vr-picker-grid">
+      <button class="vr-picker-btn" data-domain="movie">🎬 电影/剧</button>
+      <button class="vr-picker-btn" data-domain="book">📚 书籍</button>
+      <button class="vr-picker-btn" data-domain="game">🎮 游戏</button>
+      <button class="vr-picker-btn" data-domain="music">🎵 音乐</button>
+    </div>
+  `;
+  card.querySelectorAll(".vr-picker-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const d = (btn as HTMLElement).dataset.domain as Domain;
+      card.remove();
+      onIconClick(text, d);
+    });
+  });
+  parent.appendChild(card);
+  currentCard = card;
+}
+
 document.addEventListener("mouseup", (e) => {
   if ((e.target as Element | null)?.closest("#vibe-radar-host")) return;
   const sel = window.getSelection();
@@ -351,17 +375,23 @@ document.addEventListener("mouseup", (e) => {
   }
 
   const domain = detectDomain(location.href);
-  if (!domain) return;
 
   const range = sel!.getRangeAt(0);
   const rect = range.getBoundingClientRect();
 
   clearUi();
   const root = ensureShadow();
+  const known = isKnownSite(location.href);
   currentIcon = renderFloatingIcon(root, {
     x: rect.right + window.scrollX,
     y: rect.top + window.scrollY,
-    onClick: () => onIconClick(text, domain),
+    onClick: () => {
+      if (known) {
+        onIconClick(text, domain);
+      } else {
+        showDomainPicker(currentIcon!, text);
+      }
+    },
   });
   iconShownAt = performance.now();
 });

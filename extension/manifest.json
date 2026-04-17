@@ -1,25 +1,17 @@
 {
   "manifest_version": 3,
   "name": "Vibe-Radar",
-  "version": "1.0.0",
-  "description": "潜意识审美鉴定器",
+  "version": "1.5.0",
+  "description": "划词即鉴 · 你的审美雷达",
   "permissions": ["storage", "activeTab"],
   "host_permissions": [
     "http://localhost:8000/*",
-    "https://book.douban.com/*",
-    "https://movie.douban.com/*",
-    "https://store.steampowered.com/*",
-    "https://music.163.com/*"
+    "<all_urls>"
   ],
   "background": { "service_worker": "background.js" },
   "content_scripts": [
     {
-      "matches": [
-        "https://book.douban.com/*",
-        "https://movie.douban.com/*",
-        "https://store.steampowered.com/*",
-        "https://music.163.com/*"
-      ],
+      "matches": ["<all_urls>"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
