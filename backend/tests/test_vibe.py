@@ -51,10 +51,14 @@ def _install_fake_identifier(monkeypatch, response_json_str):
     constructing a valid identifier response with 'tags', 'summary', and
     'item_profile' fields.
     """
-    async def fake(text, domain, page_title, tag_pool):
+    async def fake(text, domain, page_title, tag_pool, search_context=""):
         return response_json_str
     from app.services import llm_identifier
     monkeypatch.setattr(llm_identifier, "_default_llm_call", fake)
+
+    async def no_search(text, domain):
+        return ""
+    monkeypatch.setattr(llm_identifier, "_async_web_search", no_search)
 
 
 def _install_fake_matcher(monkeypatch, adjustment=0,

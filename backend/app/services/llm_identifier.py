@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import logging
@@ -5,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import Awaitable, Callable
 
 import httpx
+from duckduckgo_search import DDGS
 from sqlalchemy import select
 
 from app import database
@@ -17,8 +19,12 @@ logger = logging.getLogger("vibe.identifier")
 CACHE_TTL_DAYS = 7
 NUM_TAGS = 24
 
-# Signature: (text, domain, page_title, tag_pool) -> raw JSON string
-LlmCallable = Callable[[str, str, str | None, list], Awaitable[str]]
+# Signature: (text, domain, page_title, tag_pool, search_context) -> raw JSON string
+LlmCallable = Callable[[str, str, str | None, list, str], Awaitable[str]]
+
+_DOMAIN_LABEL = {"book": "书籍", "movie": "电影", "game": "游戏", "music": "音乐"}
+SEARCH_TIMEOUT = 4.0
+SEARCH_MAX_RESULTS = 3
 
 
 class LlmParseError(Exception):
@@ -42,11 +48,15 @@ PROMPT_TEMPLATE = """你是一个专业的内容识别官。用户在一个【{d
 【默认假设】
 划的文字绝大概率是一个具体作品的标题。不是碎片，不是评论片段。你必须把自己调到"我一定认得出这是什么"的模式。
 
-【预训练知识激活】
-你的训练数据覆盖了大量华语电影、英美电影、主流游戏、知名书籍和专辑。先搜记忆库再输出。把 {text} 和 {page_title} 当作查询，从训练知识里捞出匹配的作品。
+【网络搜索结果】（实时联网查询，优先级最高）：
+{search_context}
 
-【重要：页面信息优先于记忆】
-如果页面标题包含年份、导演等具体信息，**以页面标题为准**，不要用训练数据中的旧信息覆盖。你的训练数据有截止日期，新作品你可能不认识——这时用页面标题和上下文推断，confidence 设为 medium。
+【信息优先级】
+1. **网络搜索结果**（最新、最准）→ 2. **页面标题**（用户当前页面）→ 3. **预训练知识**（可能过时）
+如果搜索结果和你的记忆有冲突（年份、导演、类型等），**以搜索结果为准**。
+
+【预训练知识激活】
+你的训练数据覆盖了大量华语电影、英美电影、主流游戏、知名书籍和专辑。先搜记忆库再输出。把 {text} 和 {page_title} 当作查询，从训练知识里捞出匹配的作品。但如果网络搜索结果已经给出了准确信息，直接采用搜索结果。
 
 【item_profile 输出要求】
 - item_name: 必填。中文名加书名号（如果是具体作品）；描述短语（如果是评论片段）
@@ -118,11 +128,38 @@ def _fill_profile_defaults(raw_profile: dict, text: str) -> dict:
     return profile
 
 
+def _web_search(text: str, domain: str) -> str:
+    """Search DuckDuckGo for item info. Returns formatted snippets or ''."""
+    domain_label = _DOMAIN_LABEL.get(domain, domain)
+    query = f"{text} {domain_label}"
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=SEARCH_MAX_RESULTS))
+        if not results:
+            return ""
+        snippets = []
+        for r in results:
+            snippets.append(f"- {r['title']}: {r['body']}")
+        context = "\n".join(snippets)
+        logger.info("WEB SEARCH | query=%r | %d results", query, len(results))
+        return context
+    except Exception as e:
+        logger.warning("WEB SEARCH FAILED: %s", e)
+        return ""
+
+
+async def _async_web_search(text: str, domain: str) -> str:
+    """Run blocking DuckDuckGo search in a thread pool."""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _web_search, text, domain)
+
+
 async def _default_llm_call(
     text: str,
     domain: str,
     page_title: str | None,
     tag_pool: list,
+    search_context: str = "",
 ) -> str:
     """DeepSeek-compatible chat completion. Replaceable in tests."""
     prompt = PROMPT_TEMPLATE.format(
@@ -130,6 +167,7 @@ async def _default_llm_call(
         page_title=page_title or "（无页面标题）",
         tag_pool_json=json.dumps(tag_pool, ensure_ascii=False),
         text=text,
+        search_context=search_context or "（无搜索结果）",
     )
     url = f"{settings.llm_base_url}/chat/completions"
     payload = {
@@ -189,7 +227,8 @@ async def identify(
                 }
 
         tag_pool = _load_tag_pool()
-        raw = await llm_call(text, domain, page_title, tag_pool)
+        search_context = await _async_web_search(text, domain)
+        raw = await llm_call(text, domain, page_title, tag_pool, search_context)
         try:
             parsed = json.loads(raw)
             raw_profile = parsed.get("item_profile", {})

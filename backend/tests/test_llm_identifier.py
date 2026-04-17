@@ -9,14 +9,23 @@ from app.services import llm_identifier
 from app.services.seed import seed_all
 
 
+@pytest.fixture(autouse=True)
+def _no_web_search(monkeypatch):
+    """Disable real web search in all identifier tests."""
+    async def noop(text, domain):
+        return ""
+    monkeypatch.setattr(llm_identifier, "_async_web_search", noop)
+
+
 class FakeLLM:
-    """Matches llm_identifier._default_llm_call signature: (text, domain, page_title, tag_pool) -> str."""
+    """Matches llm_identifier._default_llm_call signature."""
 
     def __init__(self, response=None, raise_exc=None):
         self.response = response
         self.raise_exc = raise_exc
         self.calls = 0
         self.last_page_title = None
+        self.last_search_context = None
 
     async def __call__(
         self,
@@ -24,9 +33,11 @@ class FakeLLM:
         domain: str,
         page_title: str | None,
         tag_pool: list,
+        search_context: str = "",
     ) -> str:
         self.calls += 1
         self.last_page_title = page_title
+        self.last_search_context = search_context
         if self.raise_exc:
             raise self.raise_exc
         return self.response
