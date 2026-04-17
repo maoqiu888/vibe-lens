@@ -1,590 +1,544 @@
 :host { all: initial; }
 
+/* ═══════════ Design System ═══════════ */
 .vr-root {
   font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-  color: #1a1a1a;
+  color: #e8e6f0;
   position: absolute;
   pointer-events: none;
 }
 
+/* ═══════════ Floating Icon ═══════════ */
 .vr-floating-icon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-  box-shadow: 0 2px 8px rgba(108, 92, 231, 0.4);
+  background: linear-gradient(135deg, #6c5ce7, #a29bfe, #fd79a8);
+  background-size: 200% 200%;
+  animation: vr-icon-shift 3s ease infinite;
+  box-shadow: 0 0 16px rgba(108, 92, 231, 0.5), 0 0 4px rgba(253, 121, 168, 0.3);
   cursor: pointer;
   pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 14px;
-  transition: transform 0.15s ease;
+  font-size: 15px;
+  transition: transform 0.2s ease, box-shadow 0.2s;
 }
-.vr-floating-icon:hover { transform: scale(1.1); }
+.vr-floating-icon:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 24px rgba(108, 92, 231, 0.7), 0 0 8px rgba(253, 121, 168, 0.5);
+}
+@keyframes vr-icon-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
 
+/* ═══════════ Card (Dark Glass) ═══════════ */
 .vr-card {
   position: absolute;
-  top: 36px;
+  top: 40px;
   left: 0;
-  width: 320px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-  padding: 16px;
+  width: 340px;
+  background: linear-gradient(145deg, rgba(22, 15, 42, 0.96), rgba(30, 22, 56, 0.94));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(108, 92, 231, 0.2);
+  box-shadow:
+    0 12px 48px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(108, 92, 231, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  padding: 20px;
   pointer-events: auto;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.6;
+  color: #d0cde0;
+  overflow: hidden;
+}
+.vr-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(162, 155, 254, 0.4), rgba(253, 121, 168, 0.3), transparent);
 }
 
+/* ═══════════ Score (Gradient Number) ═══════════ */
 .vr-score {
-  font-size: 32px;
-  font-weight: 700;
-  color: #6c5ce7;
+  font-size: 42px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #a29bfe, #6c5ce7, #fd79a8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -1px;
+  filter: drop-shadow(0 0 12px rgba(108, 92, 231, 0.4));
 }
 
-.vr-roast {
-  font-size: 15px;
-  font-weight: 600;
-  color: #4a3db0;
-  margin: 10px 0 6px;
-  line-height: 1.5;
-  letter-spacing: 0.2px;
+/* ═══════════ Level Hint ═══════════ */
+.vr-level-hint {
+  font-size: 11px;
+  color: rgba(162, 155, 254, 0.6);
+  margin-top: -2px;
+  margin-bottom: 10px;
 }
 
-/* V1.4 verdict badge */
+/* ═══════════ Verdict Badge ═══════════ */
 .vr-verdict-badge {
-  display: inline-block;
-  padding: 3px 12px;
-  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 14px;
+  border-radius: 20px;
   font-size: 12px;
   font-weight: 700;
-  margin: 8px 0 4px;
   letter-spacing: 2px;
+  margin: 6px 0 8px;
 }
 .vr-verdict-green {
-  background: #e6f9e6;
-  color: #2d8c2d;
+  background: linear-gradient(135deg, rgba(0, 206, 201, 0.15), rgba(85, 239, 196, 0.1));
+  color: #55efc4;
+  border: 1px solid rgba(85, 239, 196, 0.3);
+  box-shadow: 0 0 12px rgba(85, 239, 196, 0.15);
 }
 .vr-verdict-yellow {
-  background: #fff8e1;
-  color: #b8860b;
+  background: linear-gradient(135deg, rgba(253, 203, 110, 0.15), rgba(255, 234, 167, 0.1));
+  color: #ffeaa7;
+  border: 1px solid rgba(253, 203, 110, 0.3);
+  box-shadow: 0 0 12px rgba(253, 203, 110, 0.1);
 }
 .vr-verdict-red {
-  background: #ffe0e0;
-  color: #d63031;
+  background: linear-gradient(135deg, rgba(255, 118, 117, 0.15), rgba(214, 48, 49, 0.1));
+  color: #ff7675;
+  border: 1px solid rgba(255, 118, 117, 0.3);
+  box-shadow: 0 0 12px rgba(255, 118, 117, 0.1);
 }
 
-.vr-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
-.vr-tag {
-  padding: 2px 8px;
-  background: #f0edff;
-  color: #6c5ce7;
-  border-radius: 10px;
-  font-size: 11px;
+/* ═══════════ Roast Text ═══════════ */
+.vr-roast {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e0dced;
+  margin: 10px 0 12px;
+  line-height: 1.7;
+  letter-spacing: 0.3px;
 }
 
-.vr-actions { display: flex; gap: 8px; }
+/* ═══════════ Action Buttons (Glow) ═══════════ */
+.vr-actions { display: flex; gap: 10px; margin-top: 4px; }
 .vr-btn {
   flex: 1;
-  padding: 8px;
+  padding: 10px 8px;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
-  font-size: 14px;
-  transition: transform 0.1s;
-}
-.vr-btn:hover { transform: translateY(-1px); }
-.vr-btn.star { background: #ffeaa7; color: #b8860b; }
-.vr-btn.bomb { background: #ffe0e0; color: #d63031; }
-
-.vr-loading {
-  padding: 32px 20px 22px;
-  text-align: center;
-  color: #6c5ce7;
-  overflow: hidden;
-  background:
-    radial-gradient(ellipse at top, rgba(108, 92, 231, 0.1), transparent 70%),
-    #fdfcff;
-  border: 1px solid rgba(108, 92, 231, 0.12);
-}
-
-.vr-ping {
-  position: relative;
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 18px;
-}
-
-.vr-ping-ring {
-  position: absolute;
-  inset: 0;
-  border: 2px solid #6c5ce7;
-  border-radius: 50%;
-  opacity: 0;
-  transform: scale(0.2);
-  animation: vr-ping 2.1s cubic-bezier(0, 0.2, 0.8, 1) infinite;
-}
-.vr-ping-ring:nth-child(2) { animation-delay: 0.7s; }
-.vr-ping-ring:nth-child(3) { animation-delay: 1.4s; }
-
-@keyframes vr-ping {
-  0%   { transform: scale(0.2); opacity: 0; }
-  15%  { opacity: 0.9; }
-  100% { transform: scale(1.4); opacity: 0; }
-}
-
-.vr-ping-core {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 12px;
-  height: 12px;
-  margin: -6px 0 0 -6px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-  box-shadow: 0 0 12px rgba(108, 92, 231, 0.6);
-  animation: vr-core-breath 1.8s ease-in-out infinite;
-}
-
-@keyframes vr-core-breath {
-  0%, 100% { transform: scale(1);    box-shadow: 0 0 12px rgba(108, 92, 231, 0.6); }
-  50%      { transform: scale(1.18); box-shadow: 0 0 20px rgba(108, 92, 231, 0.9); }
-}
-
-.vr-loading-text {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
+  transition: all 0.2s ease;
   letter-spacing: 0.5px;
-  color: #6c5ce7;
-  margin-bottom: 14px;
-  animation: vr-text-fade 2.2s ease-in-out infinite;
+}
+.vr-btn:hover { transform: translateY(-2px); }
+.vr-btn:active { transform: translateY(0); }
+.vr-btn.star {
+  background: linear-gradient(135deg, rgba(85, 239, 196, 0.15), rgba(0, 206, 201, 0.1));
+  color: #55efc4;
+  border: 1px solid rgba(85, 239, 196, 0.25);
+}
+.vr-btn.star:hover {
+  box-shadow: 0 4px 20px rgba(85, 239, 196, 0.2);
+  border-color: rgba(85, 239, 196, 0.5);
+}
+.vr-btn.bomb {
+  background: linear-gradient(135deg, rgba(255, 118, 117, 0.12), rgba(214, 48, 49, 0.08));
+  color: #ff7675;
+  border: 1px solid rgba(255, 118, 117, 0.2);
+}
+.vr-btn.bomb:hover {
+  box-shadow: 0 4px 20px rgba(255, 118, 117, 0.15);
+  border-color: rgba(255, 118, 117, 0.4);
 }
 
-@keyframes vr-text-fade {
-  0%, 100% { opacity: 0.55; }
-  50%      { opacity: 1; }
-}
+/* ═══════════ SSE Stream Card ═══════════ */
+.vr-stream-card { min-height: 100px; }
+.vr-stream-step { margin-bottom: 12px; }
 
-.vr-loading-dots {
-  display: inline-block;
-  width: 18px;
-  text-align: left;
-}
-.vr-loading-dots::after {
-  content: "";
-  animation: vr-dots 1.4s steps(4, end) infinite;
-}
-
-@keyframes vr-dots {
-  0%   { content: ""; }
-  25%  { content: "·"; }
-  50%  { content: "··"; }
-  75%  { content: "···"; }
-  100% { content: ""; }
-}
-
-/* V1.5 stream card */
-.vr-stream-card {
-  min-height: 80px;
-}
-.vr-stream-step {
-  margin-bottom: 8px;
-}
-
-/* V1.5 stepped loading progress */
+/* ═══════════ Progress Bar (Glow) ═══════════ */
 .vr-step-bar {
   width: 100%;
-  height: 4px;
-  background: rgba(108, 92, 231, 0.12);
+  height: 3px;
+  background: rgba(108, 92, 231, 0.15);
   border-radius: 2px;
-  margin: 14px 0 10px;
+  margin: 0 0 12px;
   overflow: hidden;
 }
 .vr-step-fill {
   height: 100%;
   width: 0%;
-  background: linear-gradient(90deg, #6c5ce7, #a29bfe);
+  background: linear-gradient(90deg, #6c5ce7, #a29bfe, #fd79a8);
   border-radius: 2px;
-  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 8px rgba(108, 92, 231, 0.6);
 }
 .vr-step-labels {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 .vr-step-label {
   font-size: 10px;
-  color: #ccc;
-  transition: color 0.4s;
+  color: rgba(162, 155, 254, 0.3);
+  transition: all 0.4s;
+  position: relative;
 }
 .vr-step-label.active {
-  color: #6c5ce7;
+  color: #a29bfe;
   font-weight: 600;
+  text-shadow: 0 0 8px rgba(162, 155, 254, 0.4);
 }
 
+/* ═══════════ Orbital Loading Animation ═══════════ */
+.vr-loading {
+  padding: 28px 20px 20px;
+  text-align: center;
+  background: linear-gradient(145deg, rgba(22, 15, 42, 0.98), rgba(30, 22, 56, 0.96));
+}
+
+.vr-orbit {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 20px;
+}
+.vr-orbit-ring {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid rgba(108, 92, 231, 0.12);
+  border-radius: 50%;
+}
+.vr-orbit-ring:nth-child(1) { transform: rotateX(65deg); animation: vr-orbit-spin 3s linear infinite; }
+.vr-orbit-ring:nth-child(2) { transform: rotateX(65deg) rotateZ(60deg); animation: vr-orbit-spin 4s linear infinite reverse; }
+.vr-orbit-ring:nth-child(3) { transform: rotateX(65deg) rotateZ(120deg); animation: vr-orbit-spin 5s linear infinite; }
+
+.vr-orbit-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  top: -3px;
+  left: 50%;
+  margin-left: -3px;
+}
+.vr-orbit-ring:nth-child(1) .vr-orbit-dot { background: #6c5ce7; box-shadow: 0 0 8px #6c5ce7; }
+.vr-orbit-ring:nth-child(2) .vr-orbit-dot { background: #a29bfe; box-shadow: 0 0 8px #a29bfe; }
+.vr-orbit-ring:nth-child(3) .vr-orbit-dot { background: #fd79a8; box-shadow: 0 0 8px #fd79a8; }
+
+@keyframes vr-orbit-spin { to { transform: rotateX(65deg) rotateZ(360deg); } }
+.vr-orbit-ring:nth-child(2) { animation-name: vr-orbit-spin-2; }
+@keyframes vr-orbit-spin-2 { to { transform: rotateX(65deg) rotateZ(-300deg); } }
+.vr-orbit-ring:nth-child(3) { animation-name: vr-orbit-spin-3; }
+@keyframes vr-orbit-spin-3 { to { transform: rotateX(65deg) rotateZ(480deg); } }
+
+.vr-orbit-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6c5ce7, #fd79a8);
+  box-shadow: 0 0 16px rgba(108, 92, 231, 0.7), 0 0 4px rgba(253, 121, 168, 0.4);
+  animation: vr-core-pulse 2s ease-in-out infinite;
+}
+@keyframes vr-core-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 16px rgba(108, 92, 231, 0.7); }
+  50% { transform: scale(1.3); box-shadow: 0 0 24px rgba(108, 92, 231, 0.9), 0 0 8px rgba(253, 121, 168, 0.5); }
+}
+
+.vr-loading-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: #a29bfe;
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+  animation: vr-text-glow 2.5s ease-in-out infinite;
+}
+@keyframes vr-text-glow {
+  0%, 100% { opacity: 0.5; text-shadow: none; }
+  50% { opacity: 1; text-shadow: 0 0 8px rgba(162, 155, 254, 0.4); }
+}
+
+.vr-loading-dots { display: inline-block; width: 18px; text-align: left; }
+.vr-loading-dots::after { content: ""; animation: vr-dots 1.4s steps(4, end) infinite; }
+@keyframes vr-dots {
+  0% { content: ""; } 25% { content: "·"; } 50% { content: "··"; } 75% { content: "···"; }
+}
+
+/* Shimmer bar at bottom */
 .vr-shimmer-bar {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 0; right: 0; bottom: 0;
   height: 2px;
   overflow: hidden;
-  background: rgba(108, 92, 231, 0.08);
+  background: rgba(108, 92, 231, 0.06);
 }
 .vr-shimmer-bar::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: -40%;
-  width: 40%;
-  height: 100%;
-  background: linear-gradient(90deg,
-    transparent, #a29bfe, #6c5ce7, #a29bfe, transparent);
-  animation: vr-shimmer 1.6s ease-in-out infinite;
+  top: 0; left: -40%;
+  width: 40%; height: 100%;
+  background: linear-gradient(90deg, transparent, #a29bfe, #fd79a8, #a29bfe, transparent);
+  animation: vr-shimmer 1.8s ease-in-out infinite;
 }
+@keyframes vr-shimmer { 0% { left: -40%; } 100% { left: 100%; } }
 
-@keyframes vr-shimmer {
-  0%   { left: -40%; }
-  100% { left: 100%; }
-}
-
+/* ═══════════ Error ═══════════ */
 .vr-error {
-  color: #d63031;
-  padding: 14px 16px;
+  color: #ff7675;
+  padding: 16px;
   font-size: 13px;
   text-align: center;
-  background: #fff5f5;
-  border: 1px solid rgba(214, 48, 49, 0.2);
+  background: linear-gradient(145deg, rgba(30, 15, 15, 0.95), rgba(40, 20, 20, 0.93));
+  border: 1px solid rgba(255, 118, 117, 0.2);
 }
 
+/* ═══════════ Share ═══════════ */
 .vr-share-btn {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 28px;
-  height: 28px;
+  top: 14px; right: 14px;
+  width: 30px; height: 30px;
   border: none;
-  background: rgba(108, 92, 231, 0.12);
-  color: #6c5ce7;
-  border-radius: 8px;
+  background: rgba(108, 92, 231, 0.15);
+  color: #a29bfe;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
+  font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  border: 1px solid rgba(108, 92, 231, 0.1);
 }
-.vr-share-btn:hover { background: rgba(108, 92, 231, 0.22); }
+.vr-share-btn:hover {
+  background: rgba(108, 92, 231, 0.25);
+  box-shadow: 0 0 12px rgba(108, 92, 231, 0.2);
+}
 
 .vr-share-dialog {
   position: absolute;
-  top: 12px;
-  right: 48px;
-  background: #fff;
-  border: 1px solid rgba(108, 92, 231, 0.18);
-  border-radius: 10px;
+  top: 14px; right: 50px;
+  background: rgba(30, 22, 56, 0.98);
+  border: 1px solid rgba(108, 92, 231, 0.25);
+  border-radius: 12px;
   padding: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  display: flex; flex-direction: column; gap: 4px;
   z-index: 10;
 }
 .vr-share-dialog button {
-  padding: 6px 12px;
+  padding: 8px 14px;
   border: none;
-  background: #f0edff;
-  color: #6c5ce7;
-  border-radius: 6px;
+  background: rgba(108, 92, 231, 0.12);
+  color: #a29bfe;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 12px;
   white-space: nowrap;
+  transition: background 0.15s;
 }
-.vr-share-dialog button:hover { background: #e4ddff; }
+.vr-share-dialog button:hover { background: rgba(108, 92, 231, 0.25); }
 
+/* ═══════════ Toast ═══════════ */
 .vr-toast {
   position: absolute;
-  bottom: -36px;
-  left: 50%;
+  bottom: -40px; left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(108, 92, 231, 0.9);
   color: #fff;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-size: 12px;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
   animation: vr-toast-fade 2s ease;
+  box-shadow: 0 4px 16px rgba(108, 92, 231, 0.3);
 }
 @keyframes vr-toast-fade {
-  0%   { opacity: 0; transform: translate(-50%, 4px); }
-  15%  { opacity: 1; transform: translate(-50%, 0); }
-  85%  { opacity: 1; transform: translate(-50%, 0); }
+  0% { opacity: 0; transform: translate(-50%, 4px); }
+  15% { opacity: 1; transform: translate(-50%, 0); }
+  85% { opacity: 1; transform: translate(-50%, 0); }
   100% { opacity: 0; transform: translate(-50%, -4px); }
 }
 
+/* ═══════════ Links ═══════════ */
 .vr-recommend-link {
   display: block;
-  margin-top: 10px;
+  margin-top: 12px;
   font-size: 11px;
-  color: #999;
+  color: rgba(162, 155, 254, 0.5);
   cursor: pointer;
   text-align: right;
-  transition: color 0.15s;
+  transition: all 0.2s;
 }
-.vr-recommend-link:hover { color: #6c5ce7; }
+.vr-recommend-link:hover { color: #a29bfe; text-shadow: 0 0 8px rgba(162, 155, 254, 0.3); }
 
 .vr-retry-link {
   display: block;
   margin-top: 6px;
   font-size: 11px;
-  color: #d63031;
+  color: rgba(255, 118, 117, 0.5);
   cursor: pointer;
   text-align: right;
-  transition: color 0.15s;
-  opacity: 0.7;
+  transition: all 0.2s;
 }
-.vr-retry-link:hover { opacity: 1; }
+.vr-retry-link:hover { color: #ff7675; text-shadow: 0 0 8px rgba(255, 118, 117, 0.2); }
 
+/* ═══════════ Recommend Card ═══════════ */
 .vr-recommend-card {
-  margin-top: 8px;
-  position: relative;
-  top: auto;
-  left: auto;
-  background: #f8f7ff;
-  border: 1px solid rgba(108, 92, 231, 0.16);
+  margin-top: 10px;
+  position: relative; top: auto; left: auto;
+  background: rgba(22, 15, 42, 0.6);
+  border: 1px solid rgba(108, 92, 231, 0.12);
 }
-
 .vr-recommend-body { display: flex; flex-direction: column; gap: 10px; }
-
 .vr-recommend-item {
-  padding: 8px 0;
-  border-bottom: 1px dashed rgba(108, 92, 231, 0.12);
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(108, 92, 231, 0.08);
 }
 .vr-recommend-item:last-child { border-bottom: none; }
+.vr-recommend-name { font-size: 13px; font-weight: 600; color: #e0dced; margin-bottom: 3px; }
+.vr-recommend-reason { font-size: 11px; color: rgba(208, 205, 224, 0.6); line-height: 1.4; }
+.vr-recommend-loading { color: #a29bfe; font-size: 12px; padding: 10px 0; text-align: center; }
+.vr-recommend-error { color: #ff7675; font-size: 12px; padding: 10px 0; text-align: center; }
+.vr-reroll { margin-top: 10px; width: 100%; background: rgba(108, 92, 231, 0.12); color: #a29bfe; }
+.vr-reroll:disabled { opacity: 0.3; cursor: not-allowed; }
 
-.vr-recommend-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 3px;
-}
-.vr-recommend-reason {
-  font-size: 11px;
-  color: #666;
-  line-height: 1.4;
-}
+/* ═══════════ Learning Badge ═══════════ */
+.vr-learning-badge { text-align: center; padding: 16px 8px 8px; }
+.vr-learning-emoji { font-size: 48px; line-height: 1; margin-bottom: 8px; }
+.vr-learning-title { font-size: 20px; font-weight: 700; color: #a29bfe; margin-bottom: 4px; }
+.vr-learning-sub { font-size: 11px; color: rgba(162, 155, 254, 0.5); }
 
-.vr-recommend-loading { color: #888; font-size: 12px; padding: 8px 0; text-align: center; }
-.vr-recommend-error { color: #d63031; font-size: 12px; padding: 8px 0; text-align: center; }
-
-.vr-reroll {
-  margin-top: 10px;
-  width: 100%;
-  background: #f0edff;
-  color: #6c5ce7;
-}
-.vr-reroll:disabled { opacity: 0.5; cursor: not-allowed; }
-
-/* V1.2 learning stage — no numeric %, show level badge instead */
-.vr-learning-badge {
-  text-align: center;
-  padding: 16px 8px 8px;
-}
-.vr-learning-emoji {
-  font-size: 48px;
-  line-height: 1;
-  margin-bottom: 8px;
-}
-.vr-learning-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #6c5ce7;
-  margin-bottom: 4px;
-}
-.vr-learning-sub {
-  font-size: 11px;
-  color: #888;
-}
-
-/* V1.2 early stage — small level hint below the percentage */
-.vr-level-hint {
-  font-size: 11px;
-  color: #999;
-  margin-top: -4px;
-  margin-bottom: 8px;
-}
-
-/* V1.2 level-up celebration overlay */
+/* ═══════════ Level-up Overlay ═══════════ */
 .vr-levelup-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  background: linear-gradient(135deg, rgba(22, 15, 42, 0.98), rgba(30, 22, 56, 0.96));
+  border-radius: 16px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 24px;
   z-index: 100;
   transition: opacity 0.3s;
   overflow: hidden;
 }
-
-.vr-levelup-old {
-  font-size: 36px;
-  opacity: 0.9;
-  animation: vr-old-fadeup 0.6s ease forwards;
-}
+.vr-levelup-old { font-size: 36px; opacity: 0.9; animation: vr-old-fadeup 0.6s ease forwards; }
 @keyframes vr-old-fadeup {
-  0%   { opacity: 0.9; transform: translateY(0) scale(1); }
-  100% { opacity: 0;   transform: translateY(-30px) scale(0.6); }
+  0% { opacity: 0.9; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-30px) scale(0.6); }
 }
-
 .vr-levelup-arrows {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 16px;
-  margin: 8px 0;
+  color: rgba(162, 155, 254, 0.6);
+  font-size: 16px; margin: 8px 0;
   animation: vr-arrows-bounce 0.8s ease-in-out infinite;
 }
 @keyframes vr-arrows-bounce {
-  0%, 100% { opacity: 0.4; transform: translateY(0); }
-  50%      { opacity: 1;   transform: translateY(4px); }
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 0.8; transform: translateY(4px); }
 }
-
 .vr-levelup-new {
-  font-size: 72px;
-  opacity: 0;
-  transform: scale(0.3);
+  font-size: 72px; opacity: 0; transform: scale(0.3);
   animation: vr-new-popin 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s forwards;
 }
 @keyframes vr-new-popin {
-  0%   { opacity: 0; transform: scale(0.3); }
-  60%  { opacity: 1; transform: scale(1.15); }
+  0% { opacity: 0; transform: scale(0.3); }
+  60% { opacity: 1; transform: scale(1.15); }
   100% { opacity: 1; transform: scale(1.0); }
 }
-
 .vr-levelup-title {
-  color: #fff;
-  font-size: 24px;
-  font-weight: 700;
-  margin-top: 12px;
-  opacity: 0;
-  letter-spacing: 2px;
+  color: #a29bfe; font-size: 24px; font-weight: 700; margin-top: 12px;
+  opacity: 0; letter-spacing: 2px;
   animation: vr-title-fadein 0.4s ease 1.1s forwards;
 }
-@keyframes vr-title-fadein {
-  to { opacity: 1; }
-}
-
+@keyframes vr-title-fadein { to { opacity: 1; } }
 .vr-levelup-sub {
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 12px;
-  margin-top: 8px;
-  opacity: 0;
-  animation: vr-title-fadein 0.4s ease 1.3s forwards;
+  color: rgba(162, 155, 254, 0.7); font-size: 12px; margin-top: 8px;
+  opacity: 0; animation: vr-title-fadein 0.4s ease 1.3s forwards;
 }
-
 .vr-levelup-skip {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
+  position: absolute; top: 10px; right: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.5); border: none; border-radius: 50%;
+  width: 26px; height: 26px; font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
 }
-.vr-levelup-skip:hover { background: rgba(255, 255, 255, 0.3); }
+.vr-levelup-skip:hover { background: rgba(255, 255, 255, 0.15); }
 
-/* V1.5 inline personality quiz */
-.vr-personality-prompt {
-  padding: 16px;
-}
+/* ═══════════ Inline Personality Quiz ═══════════ */
+.vr-personality-prompt { padding: 20px; }
 .vr-prompt-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #6c5ce7;
-  margin-bottom: 8px;
+  font-size: 16px; font-weight: 700;
+  background: linear-gradient(135deg, #a29bfe, #fd79a8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
 }
-.vr-prompt-sub {
-  font-size: 12px;
-  color: #888;
-  margin-bottom: 16px;
-  line-height: 1.5;
-}
-.vr-prompt-actions {
-  display: flex;
-  gap: 8px;
-}
+.vr-prompt-sub { font-size: 12px; color: rgba(162, 155, 254, 0.5); margin-bottom: 16px; }
+.vr-prompt-actions { display: flex; gap: 8px; margin-top: 14px; }
 .vr-btn-go {
-  flex: 1;
-  padding: 8px;
-  border: none;
-  border-radius: 8px;
+  flex: 1; padding: 10px; border: none; border-radius: 10px;
   background: linear-gradient(135deg, #6c5ce7, #a29bfe);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
+  color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s;
 }
-.vr-btn-go:hover { opacity: 0.9; }
+.vr-btn-go:hover { box-shadow: 0 4px 16px rgba(108, 92, 231, 0.4); }
 .vr-btn-skip {
-  flex: 1;
-  padding: 8px;
-  border: none;
-  border-radius: 8px;
-  background: #f0edff;
-  color: #6c5ce7;
-  font-size: 14px;
-  cursor: pointer;
+  flex: 1; padding: 10px; border: none; border-radius: 10px;
+  background: rgba(108, 92, 231, 0.12); color: #a29bfe;
+  font-size: 13px; cursor: pointer; transition: all 0.2s;
 }
-.vr-btn-skip:hover { background: #e4ddff; }
+.vr-btn-skip:hover { background: rgba(108, 92, 231, 0.2); }
 .vr-field-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  color: #333;
-  margin: 10px 0 4px;
+  display: block; font-size: 11px; font-weight: 600;
+  color: rgba(162, 155, 254, 0.7); margin: 10px 0 4px;
+  text-transform: uppercase; letter-spacing: 1px;
 }
 .vr-quiz-input, .vr-quiz-select {
-  width: 100%;
-  padding: 6px 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 13px;
-  box-sizing: border-box;
+  width: 100%; padding: 9px 12px;
+  background: rgba(108, 92, 231, 0.08);
+  border: 1px solid rgba(108, 92, 231, 0.15);
+  border-radius: 8px; font-size: 13px; color: #e0dced;
+  box-sizing: border-box; font-family: inherit;
+  transition: all 0.2s;
 }
+.vr-quiz-input::placeholder { color: rgba(162, 155, 254, 0.3); }
 .vr-quiz-input:focus, .vr-quiz-select:focus {
   outline: none;
   border-color: #6c5ce7;
+  box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15), 0 0 12px rgba(108, 92, 231, 0.1);
 }
+.vr-quiz-select { appearance: none; cursor: pointer; }
+.vr-quiz-select option { background: #1e1638; color: #e0dced; }
 .vr-quiz-msg {
-  font-size: 11px;
-  color: #6c5ce7;
-  text-align: center;
-  margin-top: 8px;
-  min-height: 16px;
+  font-size: 11px; color: #a29bfe; text-align: center; margin-top: 10px; min-height: 16px;
 }
 
-/* V1.3 first-time onboarding hint under the action buttons */
+/* ═══════════ Onboarding Hint ═══════════ */
 .vr-onboarding-hint {
-  margin-top: 8px;
+  margin-top: 10px; font-size: 10px; color: rgba(162, 155, 254, 0.4);
+  text-align: center; line-height: 1.5; padding: 6px 10px;
+  background: rgba(108, 92, 231, 0.05); border-radius: 8px;
+}
+
+/* ═══════════ Tags ═══════════ */
+.vr-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+.vr-tag {
+  padding: 2px 10px;
+  background: rgba(108, 92, 231, 0.1);
+  color: #a29bfe;
+  border-radius: 12px;
   font-size: 10px;
-  color: #999;
-  text-align: center;
-  line-height: 1.5;
-  padding: 4px 8px;
-  background: rgba(108, 92, 231, 0.04);
-  border-radius: 6px;
+  border: 1px solid rgba(108, 92, 231, 0.15);
 }
