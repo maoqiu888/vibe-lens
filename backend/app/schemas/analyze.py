@@ -11,6 +11,7 @@ class AnalyzeRequest(BaseModel):
     domain: str  # "book" | "game" | "movie" | "music"
     context: AnalyzeContext | None = None
     hesitation_ms: int | None = None
+    exclude_items: list[str] = Field(default_factory=list)
 
 
 class MatchedTag(BaseModel):
@@ -21,6 +22,7 @@ class MatchedTag(BaseModel):
 
 class AnalyzeResponse(BaseModel):
     match_score: int
+    item_name: str = ""
     summary: str
     roast: str = ""
     verdict: str = "看心情"

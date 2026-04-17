@@ -19,8 +19,8 @@ logger = logging.getLogger("vibe.identifier")
 CACHE_TTL_DAYS = 7
 NUM_TAGS = 24
 
-# Signature: (text, domain, page_title, tag_pool, search_context) -> raw JSON string
-LlmCallable = Callable[[str, str, str | None, list, str], Awaitable[str]]
+# Signature: (text, domain, page_title, tag_pool, search_context, exclude_section) -> raw JSON string
+LlmCallable = Callable[[str, str, str | None, list, str, str], Awaitable[str]]
 
 _DOMAIN_LABEL = {"book": "书籍", "movie": "电影", "game": "游戏", "music": "音乐"}
 SEARCH_TIMEOUT = 4.0
@@ -88,7 +88,7 @@ PROMPT_TEMPLATE = """你是一个专业的内容识别官。用户在一个【{d
 
 【标签池】：
 {tag_pool_json}
-
+{exclude_section}
 【输出格式】严格 JSON，不要 markdown 代码块：
 {{"item_profile": {{...}}, "tags": [{{"tag_id": 11, "weight": 0.9}}, ...], "summary": "..."}}
 
@@ -197,6 +197,7 @@ async def _default_llm_call(
     page_title: str | None,
     tag_pool: list,
     search_context: str = "",
+    exclude_section: str = "",
 ) -> str:
     """DeepSeek-compatible chat completion. Replaceable in tests."""
     prompt = PROMPT_TEMPLATE.format(
@@ -205,6 +206,7 @@ async def _default_llm_call(
         tag_pool_json=json.dumps(tag_pool, ensure_ascii=False),
         text=text,
         search_context=search_context or "（无搜索结果）",
+        exclude_section=exclude_section,
     )
     url = f"{settings.llm_base_url}/chat/completions"
     payload = {
@@ -234,13 +236,25 @@ async def identify(
     domain: str,
     page_title: str | None = None,
     llm_call: LlmCallable | None = None,
+    exclude_items: list[str] | None = None,
 ) -> dict:
     """Returns {item_profile: dict, matched_tags: list, summary: str,
                text_hash: str, cache_hit: bool}."""
     llm_call = llm_call or _default_llm_call
+    exclude_items = exclude_items or []
     db = database.SessionLocal()
     try:
         text_hash = hash_text(text, domain)
+
+        # If retrying with exclude, delete old cache first
+        if exclude_items:
+            stale = db.scalar(
+                select(AnalysisCache).where(AnalysisCache.text_hash == text_hash)
+            )
+            if stale is not None:
+                db.delete(stale)
+                db.commit()
+
         cutoff = datetime.utcnow() - timedelta(days=CACHE_TTL_DAYS)
         cached = db.scalar(
             select(AnalysisCache).where(
@@ -269,7 +283,16 @@ async def identify(
         tag_pool, search_context = await asyncio.gather(
             tag_pool_future, search_future
         )
-        raw = await llm_call(text, domain, page_title, tag_pool, search_context)
+        exclude_section = ""
+        if exclude_items:
+            names = "、".join(f"《{n}》" for n in exclude_items)
+            exclude_section = (
+                f"\n【用户反馈：不是这个】\n"
+                f"用户明确说了这不是 {names}。请识别为**另一部同名或近似名的作品**。"
+                f"重点搜索不同年份、不同导演、不同版本的同名作品。\n"
+            )
+            logger.info("IDENTIFIER RETRY | excluding: %s", names)
+        raw = await llm_call(text, domain, page_title, tag_pool, search_context, exclude_section)
         try:
             parsed = json.loads(raw)
             raw_profile = parsed.get("item_profile", {})

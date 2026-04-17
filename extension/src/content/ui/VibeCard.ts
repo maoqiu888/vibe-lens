@@ -10,6 +10,7 @@ export interface VibeCardProps {
   sourceDomain: Domain;
   text: string;
   onClose: () => void;
+  onRetry?: (excludeItems: string[]) => void;
 }
 
 export function renderVibeCard(props: VibeCardProps): HTMLElement {
@@ -147,6 +148,19 @@ export function renderVibeCard(props: VibeCardProps): HTMLElement {
     });
   });
   card.appendChild(recommendLink);
+
+  // "Not this one" retry button
+  if (props.onRetry && result.item_name) {
+    const retryLink = document.createElement("a");
+    retryLink.className = "vr-retry-link";
+    retryLink.textContent = "✕ 不是这个，重新识别";
+    retryLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      props.onRetry!([result.item_name]);
+    });
+    card.appendChild(retryLink);
+  }
 
   parent.appendChild(card);
   return card;

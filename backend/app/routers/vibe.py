@@ -26,7 +26,8 @@ async def analyze(
     page_title = payload.context.page_title if payload.context else None
     try:
         identification = await llm_identifier.identify(
-            payload.text, payload.domain, page_title=page_title
+            payload.text, payload.domain, page_title=page_title,
+            exclude_items=payload.exclude_items or None,
         )
     except llm_identifier.LlmParseError as e:
         raise HTTPException(
@@ -105,6 +106,7 @@ async def analyze(
 
     return AnalyzeResponse(
         match_score=final_score,
+        item_name=item_profile.get("item_name", ""),
         summary=identification["summary"],
         roast=roast,
         verdict=verdict,

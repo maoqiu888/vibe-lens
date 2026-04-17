@@ -10,6 +10,7 @@ export type Verdict = "追" | "看心情" | "跳过";
 
 export interface AnalyzeResult {
   match_score: number;
+  item_name: string;
   summary: string;
   roast: string;
   verdict: Verdict;
@@ -75,7 +76,7 @@ export interface RecommendResult {
 }
 
 export type Msg =
-  | { type: "ANALYZE"; payload: { text: string; domain: Domain; pageTitle: string; pageUrl: string; hesitationMs: number | null } }
+  | { type: "ANALYZE"; payload: { text: string; domain: Domain; pageTitle: string; pageUrl: string; hesitationMs: number | null; excludeItems?: string[] } }
   | { type: "ACTION"; payload: { action: "star" | "bomb"; matchedTagIds: number[]; textHash?: string; readMs: number | null } }
   | { type: "GET_RADAR" }
   | { type: "RECOMMEND"; payload: { text: string; sourceDomain: Domain; matchedTagIds: number[] } }

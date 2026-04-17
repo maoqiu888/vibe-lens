@@ -34,6 +34,7 @@ class FakeLLM:
         page_title: str | None,
         tag_pool: list,
         search_context: str = "",
+        exclude_section: str = "",
     ) -> str:
         self.calls += 1
         self.last_page_title = page_title

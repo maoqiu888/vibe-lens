@@ -37,6 +37,7 @@ async function routeApi(msg: Msg): Promise<unknown> {
           page_url: msg.payload.pageUrl,
         },
         hesitation_ms: msg.payload.hesitationMs,
+        exclude_items: msg.payload.excludeItems || [],
       });
     case "ACTION":
       return fetchJson("POST", "/vibe/action", {

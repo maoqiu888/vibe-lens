@@ -67,13 +67,15 @@ function showPersonalityPrompt(parent: HTMLElement) {
   parent.appendChild(card);
 }
 
-async function onIconClick(text: string, domain: Domain) {
+async function onIconClick(text: string, domain: Domain, excludeItems?: string[]) {
   if (!currentIcon) return;
 
-  const stored = await chrome.storage.local.get("personality_completed");
-  if (!stored.personality_completed) {
-    showPersonalityPrompt(currentIcon);
-    return;
+  if (!excludeItems) {
+    const stored = await chrome.storage.local.get("personality_completed");
+    if (!stored.personality_completed) {
+      showPersonalityPrompt(currentIcon);
+      return;
+    }
   }
 
   // Show stepped loading animation
@@ -128,6 +130,7 @@ async function onIconClick(text: string, domain: Domain) {
       pageTitle: document.title,
       pageUrl: location.href,
       hesitationMs,
+      excludeItems: excludeItems || undefined,
     },
   };
 
@@ -137,8 +140,14 @@ async function onIconClick(text: string, domain: Domain) {
     stepFill.style.width = "100%";
     loading.remove();
 
+    const retryHandler = (newExcludes: string[]) => {
+      const allExcludes = [...(excludeItems || []), ...newExcludes];
+      currentCard?.remove();
+      currentCard = null;
+      onIconClick(text, domain, allExcludes);
+    };
+
     if (result.level_up) {
-      // Play celebration first, then render the real card
       const tempCard = document.createElement("div");
       tempCard.className = "vr-card";
       currentIcon.appendChild(tempCard);
@@ -151,6 +160,7 @@ async function onIconClick(text: string, domain: Domain) {
           sourceDomain: domain,
           text,
           onClose: clearUi,
+          onRetry: retryHandler,
         });
       });
     } else {
@@ -160,6 +170,7 @@ async function onIconClick(text: string, domain: Domain) {
         sourceDomain: domain,
         text,
         onClose: clearUi,
+        onRetry: retryHandler,
       });
     }
   } catch (e: any) {

@@ -329,6 +329,18 @@
 }
 .vr-recommend-link:hover { color: #6c5ce7; }
 
+.vr-retry-link {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #d63031;
+  cursor: pointer;
+  text-align: right;
+  transition: color 0.15s;
+  opacity: 0.7;
+}
+.vr-retry-link:hover { opacity: 1; }
+
 .vr-recommend-card {
   margin-top: 8px;
   position: relative;
