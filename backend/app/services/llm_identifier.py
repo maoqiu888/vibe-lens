@@ -10,7 +10,7 @@ from ddgs import DDGS
 from sqlalchemy import select
 
 from app import database
-from app.config import settings
+from app.services.llm_config_reader import get_llm_settings
 from app.models.analysis_cache import AnalysisCache
 from app.models.vibe_tag import VibeTag
 
@@ -212,14 +212,15 @@ async def _default_llm_call(
         search_context=search_context or "（无搜索结果）",
         exclude_section=exclude_section,
     )
-    url = f"{settings.llm_base_url}/chat/completions"
+    cfg = get_llm_settings()
+    url = f"{cfg['base_url']}/chat/completions"
     payload = {
-        "model": settings.llm_model,
+        "model": cfg["model"],
         "messages": [{"role": "user", "content": prompt}],
         "response_format": {"type": "json_object"},
         "temperature": 0.5,
     }
-    headers = {"Authorization": f"Bearer {settings.llm_api_key}"}
+    headers = {"Authorization": f"Bearer {cfg['api_key']}"}
     logger.info(
         "IDENTIFIER CALL | text=%r | domain=%s | page_title=%r",
         text[:80], domain, (page_title or "")[:80],

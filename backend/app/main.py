@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.routers import personality, profile, vibe
+from app.routers import personality, profile, settings, vibe
 from app.services.feedback_analyzer import process_pending_feedback
 
 logger = logging.getLogger("vibe.main")
@@ -38,6 +38,7 @@ def health():
 app.include_router(vibe.router)
 app.include_router(profile.router)
 app.include_router(personality.router)
+app.include_router(settings.router)
 
 
 FEEDBACK_INTERVAL_SECONDS = 300  # 5 minutes

@@ -3,7 +3,7 @@ from typing import Awaitable, Callable
 
 import httpx
 
-from app.config import settings
+from app.services.llm_config_reader import get_llm_settings
 
 LlmCallable = Callable[[str, str], Awaitable[str]]
 
@@ -71,9 +71,10 @@ def _load_tag_pool_json() -> str:
 
 
 async def _default_llm_call(system_prompt: str, user_prompt: str) -> str:
-    url = f"{settings.llm_base_url}/chat/completions"
+    cfg = get_llm_settings()
+    url = f"{cfg['base_url']}/chat/completions"
     payload = {
-        "model": settings.llm_model,
+        "model": cfg["model"],
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -81,7 +82,7 @@ async def _default_llm_call(system_prompt: str, user_prompt: str) -> str:
         "response_format": {"type": "json_object"},
         "temperature": 0.7,
     }
-    headers = {"Authorization": f"Bearer {settings.llm_api_key}"}
+    headers = {"Authorization": f"Bearer {cfg['api_key']}"}
     async with httpx.AsyncClient(timeout=15.0) as client:
         r = await client.post(url, json=payload, headers=headers)
         r.raise_for_status()

@@ -13,7 +13,7 @@ import httpx
 from sqlalchemy import select
 
 from app import database
-from app.config import settings
+from app.services.llm_config_reader import get_llm_settings
 from app.models.match_feedback import MatchFeedback
 from app.models.vibe_tag import VibeTag
 from app.services import profile_calc
@@ -56,9 +56,10 @@ def _build_feedback_prompt(feedbacks: list[dict], tag_names: dict[int, str]) -> 
 
 
 async def _llm_analyze(prompt: str) -> dict:
-    url = f"{settings.llm_base_url}/chat/completions"
+    cfg = get_llm_settings()
+    url = f"{cfg['base_url']}/chat/completions"
     payload = {
-        "model": settings.llm_model,
+        "model": cfg["model"],
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
@@ -66,7 +67,7 @@ async def _llm_analyze(prompt: str) -> dict:
         "response_format": {"type": "json_object"},
         "temperature": 0.2,
     }
-    headers = {"Authorization": f"Bearer {settings.llm_api_key}"}
+    headers = {"Authorization": f"Bearer {cfg['api_key']}"}
     async with httpx.AsyncClient(timeout=15.0) as client:
         r = await client.post(url, json=payload, headers=headers)
         r.raise_for_status()
