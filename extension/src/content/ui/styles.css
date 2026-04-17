@@ -1,9 +1,67 @@
 :host { all: initial; }
 
+/* ═══════════ Theme Variables ═══════════ */
+:host {
+  --vr-bg: linear-gradient(145deg, rgba(22, 15, 42, 0.96), rgba(30, 22, 56, 0.94));
+  --vr-card-border: rgba(108, 92, 231, 0.2);
+  --vr-card-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+  --vr-card-top-line: linear-gradient(90deg, transparent, rgba(162, 155, 254, 0.4), rgba(253, 121, 168, 0.3), transparent);
+  --vr-text: #e0dced;
+  --vr-text-dim: rgba(162, 155, 254, 0.5);
+  --vr-text-dimmer: rgba(162, 155, 254, 0.3);
+  --vr-accent: #a29bfe;
+  --vr-accent-bg: rgba(108, 92, 231, 0.12);
+  --vr-accent-border: rgba(108, 92, 231, 0.15);
+  --vr-input-bg: rgba(108, 92, 231, 0.08);
+  --vr-green: #55efc4;
+  --vr-green-bg: rgba(85, 239, 196, 0.12);
+  --vr-green-border: rgba(85, 239, 196, 0.25);
+  --vr-yellow: #ffeaa7;
+  --vr-yellow-bg: rgba(253, 203, 110, 0.12);
+  --vr-yellow-border: rgba(253, 203, 110, 0.25);
+  --vr-red: #ff7675;
+  --vr-red-bg: rgba(255, 118, 117, 0.1);
+  --vr-red-border: rgba(255, 118, 117, 0.2);
+  --vr-link: rgba(162, 155, 254, 0.6);
+  --vr-link-hover: #a29bfe;
+  --vr-retry: rgba(253, 121, 168, 0.6);
+  --vr-retry-hover: #fd79a8;
+  --vr-select-option-bg: #1e1638;
+}
+
+/* ═══════════ Light Cyberpunk Theme ═══════════ */
+:host(.vr-light) {
+  --vr-bg: linear-gradient(145deg, rgba(248, 245, 255, 0.97), rgba(240, 237, 255, 0.95));
+  --vr-card-border: rgba(108, 92, 231, 0.15);
+  --vr-card-shadow: 0 8px 40px rgba(108, 92, 231, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+  --vr-card-top-line: linear-gradient(90deg, transparent, rgba(108, 92, 231, 0.5), rgba(253, 121, 168, 0.4), transparent);
+  --vr-text: #2d2545;
+  --vr-text-dim: rgba(108, 92, 231, 0.6);
+  --vr-text-dimmer: rgba(108, 92, 231, 0.35);
+  --vr-accent: #6c5ce7;
+  --vr-accent-bg: rgba(108, 92, 231, 0.08);
+  --vr-accent-border: rgba(108, 92, 231, 0.18);
+  --vr-input-bg: rgba(108, 92, 231, 0.05);
+  --vr-green: #00b894;
+  --vr-green-bg: rgba(0, 184, 148, 0.08);
+  --vr-green-border: rgba(0, 184, 148, 0.2);
+  --vr-yellow: #e17055;
+  --vr-yellow-bg: rgba(225, 112, 85, 0.08);
+  --vr-yellow-border: rgba(225, 112, 85, 0.2);
+  --vr-red: #d63031;
+  --vr-red-bg: rgba(214, 48, 49, 0.06);
+  --vr-red-border: rgba(214, 48, 49, 0.15);
+  --vr-link: rgba(108, 92, 231, 0.6);
+  --vr-link-hover: #6c5ce7;
+  --vr-retry: rgba(214, 48, 49, 0.5);
+  --vr-retry-hover: #d63031;
+  --vr-select-option-bg: #f5f3ff;
+}
+
 /* ═══════════ Design System ═══════════ */
 .vr-root {
   font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-  color: #e8e6f0;
+  color: var(--vr-text);
   position: absolute;
   pointer-events: none;
 }
@@ -35,36 +93,31 @@
   50% { background-position: 100% 50%; }
 }
 
-/* ═══════════ Card (Dark Glass) ═══════════ */
+/* ═══════════ Card (Glass) ═══════════ */
 .vr-card {
   position: absolute;
   top: 40px;
   left: 0;
   width: 340px;
-  background: linear-gradient(145deg, rgba(22, 15, 42, 0.96), rgba(30, 22, 56, 0.94));
+  background: var(--vr-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 16px;
-  border: 1px solid rgba(108, 92, 231, 0.2);
-  box-shadow:
-    0 12px 48px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(108, 92, 231, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--vr-card-border);
+  box-shadow: var(--vr-card-shadow);
   padding: 20px;
   pointer-events: auto;
   font-size: 13px;
   line-height: 1.6;
-  color: #d0cde0;
+  color: var(--vr-text);
   overflow: hidden;
 }
 .vr-card::before {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 0; left: 0; right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(162, 155, 254, 0.4), rgba(253, 121, 168, 0.3), transparent);
+  background: var(--vr-card-top-line);
 }
 
 /* ═══════════ Score (Gradient Number) ═══════════ */
@@ -100,29 +153,26 @@
   margin: 6px 0 8px;
 }
 .vr-verdict-green {
-  background: linear-gradient(135deg, rgba(0, 206, 201, 0.15), rgba(85, 239, 196, 0.1));
-  color: #55efc4;
-  border: 1px solid rgba(85, 239, 196, 0.3);
-  box-shadow: 0 0 12px rgba(85, 239, 196, 0.15);
+  background: var(--vr-green-bg);
+  color: var(--vr-green);
+  border: 1px solid var(--vr-green-border);
 }
 .vr-verdict-yellow {
-  background: linear-gradient(135deg, rgba(253, 203, 110, 0.15), rgba(255, 234, 167, 0.1));
-  color: #ffeaa7;
-  border: 1px solid rgba(253, 203, 110, 0.3);
-  box-shadow: 0 0 12px rgba(253, 203, 110, 0.1);
+  background: var(--vr-yellow-bg);
+  color: var(--vr-yellow);
+  border: 1px solid var(--vr-yellow-border);
 }
 .vr-verdict-red {
-  background: linear-gradient(135deg, rgba(255, 118, 117, 0.15), rgba(214, 48, 49, 0.1));
-  color: #ff7675;
-  border: 1px solid rgba(255, 118, 117, 0.3);
-  box-shadow: 0 0 12px rgba(255, 118, 117, 0.1);
+  background: var(--vr-red-bg);
+  color: var(--vr-red);
+  border: 1px solid var(--vr-red-border);
 }
 
 /* ═══════════ Roast Text ═══════════ */
 .vr-roast {
   font-size: 14px;
   font-weight: 500;
-  color: #e0dced;
+  color: var(--vr-text);
   margin: 10px 0 12px;
   line-height: 1.7;
   letter-spacing: 0.3px;
@@ -144,23 +194,17 @@
 .vr-btn:hover { transform: translateY(-2px); }
 .vr-btn:active { transform: translateY(0); }
 .vr-btn.star {
-  background: linear-gradient(135deg, rgba(85, 239, 196, 0.15), rgba(0, 206, 201, 0.1));
-  color: #55efc4;
-  border: 1px solid rgba(85, 239, 196, 0.25);
+  background: var(--vr-green-bg);
+  color: var(--vr-green);
+  border: 1px solid var(--vr-green-border);
 }
-.vr-btn.star:hover {
-  box-shadow: 0 4px 20px rgba(85, 239, 196, 0.2);
-  border-color: rgba(85, 239, 196, 0.5);
-}
+.vr-btn.star:hover { border-color: var(--vr-green); }
 .vr-btn.bomb {
-  background: linear-gradient(135deg, rgba(255, 118, 117, 0.12), rgba(214, 48, 49, 0.08));
-  color: #ff7675;
-  border: 1px solid rgba(255, 118, 117, 0.2);
+  background: var(--vr-red-bg);
+  color: var(--vr-red);
+  border: 1px solid var(--vr-red-border);
 }
-.vr-btn.bomb:hover {
-  box-shadow: 0 4px 20px rgba(255, 118, 117, 0.15);
-  border-color: rgba(255, 118, 117, 0.4);
-}
+.vr-btn.bomb:hover { border-color: var(--vr-red); }
 
 /* ═══════════ SSE Stream Card ═══════════ */
 .vr-stream-card { min-height: 100px; }
@@ -262,7 +306,7 @@
 .vr-loading-text {
   font-size: 12px;
   font-weight: 500;
-  color: #a29bfe;
+  color: var(--vr-accent);
   margin-bottom: 16px;
   letter-spacing: 1px;
   animation: vr-text-glow 2.5s ease-in-out infinite;
@@ -375,26 +419,66 @@
 
 /* ═══════════ Links ═══════════ */
 .vr-recommend-link {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   margin-top: 12px;
+  padding: 6px 12px;
   font-size: 11px;
-  color: rgba(162, 155, 254, 0.5);
+  color: var(--vr-link);
   cursor: pointer;
-  text-align: right;
+  border: 1px solid var(--vr-accent-border);
+  border-radius: 8px;
+  background: var(--vr-accent-bg);
   transition: all 0.2s;
+  float: right;
 }
-.vr-recommend-link:hover { color: #a29bfe; text-shadow: 0 0 8px rgba(162, 155, 254, 0.3); }
+.vr-recommend-link:hover {
+  color: var(--vr-link-hover);
+  border-color: var(--vr-accent);
+  background: var(--vr-input-bg);
+}
 
 .vr-retry-link {
-  display: block;
-  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 6px 12px;
   font-size: 11px;
-  color: rgba(255, 118, 117, 0.5);
+  color: var(--vr-retry);
   cursor: pointer;
-  text-align: right;
+  border: 1px solid var(--vr-red-border);
+  border-radius: 8px;
+  background: var(--vr-red-bg);
   transition: all 0.2s;
+  float: right;
+  clear: right;
 }
-.vr-retry-link:hover { color: #ff7675; text-shadow: 0 0 8px rgba(255, 118, 117, 0.2); }
+.vr-retry-link:hover {
+  color: var(--vr-retry-hover);
+  border-color: var(--vr-red);
+}
+
+/* Theme toggle button */
+.vr-theme-toggle {
+  position: absolute;
+  top: 14px; right: 48px;
+  width: 28px; height: 28px;
+  border: none;
+  background: var(--vr-accent-bg);
+  color: var(--vr-accent);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  border: 1px solid var(--vr-accent-border);
+}
+.vr-theme-toggle:hover {
+  background: var(--vr-input-bg);
+  border-color: var(--vr-accent);
+}
 
 /* ═══════════ Recommend Card ═══════════ */
 .vr-recommend-card {

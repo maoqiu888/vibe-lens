@@ -23,7 +23,18 @@ function ensureShadow(): ShadowRoot {
   root.appendChild(style);
   document.body.appendChild(host);
   shadowRoot = root;
+  // Apply saved theme
+  chrome.storage.local.get("vr_theme").then(({ vr_theme }) => {
+    if (vr_theme === "light") host.classList.add("vr-light");
+  });
   return root;
+}
+
+function toggleTheme() {
+  const host = document.getElementById("vibe-radar-host");
+  if (!host) return;
+  const isLight = host.classList.toggle("vr-light");
+  chrome.storage.local.set({ vr_theme: isLight ? "light" : "dark" });
 }
 
 function clearUi() {
@@ -133,6 +144,7 @@ async function onIconClick(text: string, domain: Domain, excludeItems?: string[]
   const card = document.createElement("div");
   card.className = "vr-card vr-stream-card";
   card.innerHTML = `
+    <button class="vr-theme-toggle" title="切换主题">🌓</button>
     <div class="vr-stream-step">
       <div class="vr-step-bar"><div class="vr-step-fill"></div></div>
       <div class="vr-step-labels">
@@ -146,6 +158,11 @@ async function onIconClick(text: string, domain: Domain, excludeItems?: string[]
     <div class="vr-stream-roast" style="display:none"></div>
     <div class="vr-stream-actions" style="display:none"></div>
   `;
+  card.querySelector(".vr-theme-toggle")!.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleTheme();
+  });
+
   currentIcon.appendChild(card);
   currentCard = card;
 
