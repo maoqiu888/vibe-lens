@@ -68,14 +68,21 @@ FastAPI Backend
 
 ## 快速开始
 
-### 1. 克隆项目
+### 一键启动
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/vibe-radar.git
 cd vibe-radar
+
+# Windows: 双击 start.bat
+# Mac/Linux: ./start.sh
 ```
 
-### 2. 启动后端
+首次运行会自动创建虚拟环境、安装依赖、初始化数据库。
+
+如果没有 `.env` 文件，会自动从模板创建并提示你填入 API Key。
+
+### 手动启动
 
 ```bash
 cd backend
@@ -84,46 +91,36 @@ source .venv/Scripts/activate  # Windows
 # source .venv/bin/activate    # Mac/Linux
 
 pip install -r requirements.txt
+cp .env.example .env           # 编辑 .env 填入 API Key
 python -m app.services.seed    # 初始化数据库
-
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --port 8000
 ```
 
-### 3. 配置大模型
+### 配置大模型
 
-打开 `http://localhost:8000`，点击「设置」标签页：
+**方式 1：Web 界面**（推荐）
 
-1. 选择模型厂商（DeepSeek / OpenAI / Claude / ...）
-2. 填入 API Key
-3. 点击「测试连接」确认可用
-4. 点击「保存配置」
+打开 `http://localhost:8000` → 设置 → 选厂商 → 填 Key → 测试连接 → 保存
 
-或者在 `backend/.env` 文件中配置：
+**方式 2：`.env` 文件**
 
 ```env
-LLM_PROVIDER=deepseek
 LLM_API_KEY=sk-your-key-here
-LLM_MODEL=deepseek-chat
-LLM_BASE_URL=https://api.deepseek.com
 ```
 
-### 4. 安装 Chrome 扩展
+### 安装 Chrome 扩展（划词功能）
 
 ```bash
 cd extension
-npm install
-npm run build
+npm install && npm run build
 ```
 
-Chrome → `chrome://extensions` → 开启「开发者模式」→ 「加载已解压的扩展程序」→ 选择 `extension/build` 目录
+Chrome → `chrome://extensions` → 开发者模式 → 加载已解压 → 选 `extension/build`
 
-### 5. 开始使用
+### 开始使用
 
-在任意网页上选中文字 → 点击紫色 ✦ 图标 → 查看鉴定结果
-
-## Web 版（可选）
-
-不想装扩展？启动后端后直接打开 `http://localhost:8000`，粘贴文字即可鉴定。
+- **Web 版**：打开 `http://localhost:8000`，粘贴文字鉴定
+- **插件版**：任意网页选中文字 → 点紫色 ✦ 图标
 
 ## 支持的模型
 
