@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >/dev/null
 echo ==========================================
-echo   Vibe-Radar
+echo   Vibe-Lens
 echo ==========================================
 echo.
 

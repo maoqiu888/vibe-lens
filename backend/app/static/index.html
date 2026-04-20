@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vibe-Radar · 审美雷达</title>
+<title>Vibe-Lens · 审美雷达</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -133,7 +133,7 @@ select option { background: var(--card); color: var(--text); }
 <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
 <div class="container">
   <div class="header">
-    <div class="logo">Vibe-Radar</div>
+    <div class="logo">Vibe-Lens</div>
     <div class="tagline">划词即鉴 · 你的审美雷达</div>
   </div>
 
@@ -141,7 +141,7 @@ select option { background: var(--card); color: var(--text); }
   <div class="card" style="text-align:center;margin-bottom:20px;padding:16px">
     <div style="font-size:13px;font-weight:600;color:var(--accent);margin-bottom:8px">拖到书签栏 → 任何网页划词即可用</div>
     <a class="bookmarklet" href="javascript:void(document.head.appendChild(document.createElement('script')).src='http://localhost:8000/vibe.js?t='+Date.now())">
-      ✦ Vibe-Radar 划词鉴定
+      ✦ Vibe-Lens 划词鉴定
     </a>
     <div style="font-size:11px;color:var(--text-dim);margin-top:8px">或在任意网页控制台输入：<code style="background:var(--input-bg);padding:2px 6px;border-radius:4px;font-size:10px">fetch('http://localhost:8000/vibe.js').then(r=>r.text()).then(eval)</code></div>
   </div>

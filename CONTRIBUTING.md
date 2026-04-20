@@ -1,6 +1,6 @@
-# Contributing to Vibe-Radar
+# Contributing to Vibe-Lens
 
-感谢你有兴趣为 Vibe-Radar 贡献代码！
+感谢你有兴趣为 Vibe-Lens 贡献代码！
 
 ## 提交流程
 

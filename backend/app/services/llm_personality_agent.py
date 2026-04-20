@@ -18,7 +18,7 @@ class PersonalityAgentEmptyError(Exception):
     """Raised when neither MBTI nor constellation is supplied."""
 
 
-_SYSTEM_PROMPT_TEMPLATE = """你是 Vibe-Radar 的"性格翻译官"。用户给你他的 MBTI 和/或星座，你要做两件事：
+_SYSTEM_PROMPT_TEMPLATE = """你是 Vibe-Lens 的"性格翻译官"。用户给你他的 MBTI 和/或星座，你要做两件事：
 
 1. 从固定的 24 个"品味标签池"里选出最多 8 个对他显著的标签，并给每个 -15 到 +15 的权重（正数 = 他会喜欢这种内容，负数 = 他会讨厌）。只给你确信的；不确信的不要出现。
 2. 用 100-200 字的自然大白话描述这个人的审美倾向和性格，像在跟一个不认识他的朋友介绍他。描述里不要提 MBTI、星座的术语缩写，也不要用品味标签池里的词汇——你只是在用日常语言描述。

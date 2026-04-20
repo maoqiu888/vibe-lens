@@ -13,7 +13,7 @@ from app.services.feedback_analyzer import process_pending_feedback
 
 logger = logging.getLogger("vibe.main")
 
-app = FastAPI(title="Vibe-Radar", version="1.0.0")
+app = FastAPI(title="Vibe-Lens", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

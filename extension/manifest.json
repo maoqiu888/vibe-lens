@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Vibe-Radar",
+  "name": "Vibe-Lens",
   "version": "1.5.0",
   "description": "划词即鉴 · 你的审美雷达",
   "permissions": ["storage", "activeTab"],

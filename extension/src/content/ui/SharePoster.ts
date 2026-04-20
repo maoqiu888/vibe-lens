@@ -60,7 +60,7 @@ function drawWordmark(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#fff";
   ctx.font = `bold 60px system-ui, "PingFang SC", sans-serif`;
   ctx.textBaseline = "top";
-  ctx.fillText("Vibe-Radar", 60, 60);
+  ctx.fillText("Vibe-Lens", 60, 60);
   ctx.restore();
 }
 
@@ -136,7 +136,7 @@ function drawFooter(ctx: CanvasRenderingContext2D) {
   ctx.font = `28px system-ui, "PingFang SC", sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "bottom";
-  ctx.fillText("vibe-radar.local", W / 2, H - 60);
+  ctx.fillText("vibe-lens.local", W / 2, H - 60);
   ctx.restore();
 }
 
@@ -183,7 +183,7 @@ export async function copyPosterToClipboard(canvas: HTMLCanvasElement): Promise<
 
 export function downloadPoster(canvas: HTMLCanvasElement): void {
   const link = document.createElement("a");
-  link.download = `vibe-radar-${Date.now()}.png`;
+  link.download = `vibe-lens-${Date.now()}.png`;
   link.href = canvas.toDataURL("image/png");
   link.click();
 }

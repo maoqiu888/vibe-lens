@@ -1,5 +1,5 @@
 <p align="center">
-  <strong style="font-size:32px">✦ Vibe-Radar</strong>
+  <strong style="font-size:32px">✦ Vibe-Lens</strong>
   <br/>
   <em>划词即鉴 · 你的审美雷达</em>
 </p>
@@ -14,7 +14,7 @@
 
 ---
 
-**Vibe-Radar** 是一个基于 LLM 的个性化内容匹配工具。在任何网页上选中一段文字（电影名、书名、游戏名），它会告诉你：**这东西适不适合你**。
+**Vibe-Lens** 是一个基于 LLM 的个性化内容匹配工具。在任何网页上选中一段文字（电影名、书名、游戏名），它会告诉你：**这东西适不适合你**。
 
 不是冷冰冰的评分，而是像一个懂你审美的朋友，用人话告诉你值不值得花时间。
 
@@ -72,7 +72,7 @@ FastAPI Backend
 
 ```bash
 git clone https://github.com/maoqiu888/vibe-lens.git
-cd vibe-radar
+cd vibe-lens
 
 # Windows: 双击 start.bat
 # Mac/Linux: ./start.sh
@@ -166,7 +166,7 @@ final_score = clamp(cosine_base_score + llm_adjustment, 0, 100)
 ## 项目结构
 
 ```
-vibe-radar/
+vibe-lens/
 ├── backend/
 │   ├── app/
 │   │   ├── main.py                 # FastAPI 入口
@@ -252,7 +252,7 @@ A: 删除 `backend/data/vibe_radar.db`，重新 `python -m app.services.seed`。
 
 > 不是"大家都在看"，而是"你一定会喜欢"
 
-Vibe-Radar 的 24 维向量 + 用户反馈数据，天然是一个推荐系统的冷启动方案：
+Vibe-Lens 的 24 维向量 + 用户反馈数据，天然是一个推荐系统的冷启动方案：
 - 接入 Netflix / Steam / Kindle 的观看/游玩/阅读记录，自动构建审美画像
 - 跨域推荐："你喜欢《三体》→ 你可能喜欢《群星》（游戏）→ 你可能喜欢 Radiohead（音乐）"
 - 为内容平台提供 Vibe-based Recommendation API

@@ -120,7 +120,7 @@ sqlite3 data/vibe_radar.db "SELECT action, delta FROM action_log ORDER BY id DES
 ### 14. Personality quiz on first install (V1.3)
 - After resetting the DB and restarting uvicorn, open the popup
 - Expected: a **Personality Quiz Page** (not Welcome or Radar) with:
-  - Header "Vibe-Radar 快速定位"
+  - Header "Vibe-Lens 快速定位"
   - Subtitle "告诉我一点关于你的事，让 Vibe 马上懂你"
   - An MBTI text input (max 4 chars, placeholder "INTP")
   - A 16personalities.com link below the MBTI input

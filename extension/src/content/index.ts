@@ -16,7 +16,7 @@ let iconShownAt: number | null = null;
 function ensureShadow(): ShadowRoot {
   if (shadowRoot) return shadowRoot;
   const host = document.createElement("div");
-  host.id = "vibe-radar-host";
+  host.id = "vibe-lens-host";
   host.style.cssText = "position:absolute;top:0;left:0;z-index:2147483647;";
   const root = host.attachShadow({ mode: "open" });
   const style = document.createElement("style");
@@ -32,7 +32,7 @@ function ensureShadow(): ShadowRoot {
 }
 
 function toggleTheme() {
-  const host = document.getElementById("vibe-radar-host");
+  const host = document.getElementById("vibe-lens-host");
   if (!host) return;
   const isLight = host.classList.toggle("vr-light");
   chrome.storage.local.set({ vr_theme: isLight ? "light" : "dark" });
@@ -342,7 +342,7 @@ function showStreamActions(
 }
 
 document.addEventListener("mouseup", (e) => {
-  if ((e.target as Element | null)?.closest("#vibe-radar-host")) return;
+  if ((e.target as Element | null)?.closest("#vibe-lens-host")) return;
   const sel = window.getSelection();
   const text = sel?.toString().trim() ?? "";
   if (text.length < MIN_TEXT_LEN || text.length > MAX_TEXT_LEN) {
@@ -371,7 +371,7 @@ document.addEventListener("keydown", (e) => {
 
 document.addEventListener("mousedown", (e) => {
   // Click outside the shadow host → hide
-  if (currentIcon && !(e.target as Element).closest("#vibe-radar-host")) {
+  if (currentIcon && !(e.target as Element).closest("#vibe-lens-host")) {
     clearUi();
   }
 });

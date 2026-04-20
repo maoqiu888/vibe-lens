@@ -1,5 +1,5 @@
 """
-Vibe-Radar 桌面版 —— 全局划词鉴定
+Vibe-Lens 桌面版 —— 全局划词鉴定
 启动: backend/.venv/Scripts/python desktop/app.py
 用法: 在任意地方选中文字 → 鼠标旁自动弹出按钮 → 点击鉴定
 """
@@ -184,7 +184,7 @@ def show_window_loading(text):
 
     w = tk.Tk()
     _current_win = w
-    w.title("Vibe-Radar")
+    w.title("Vibe-Lens")
     w.overrideredirect(True)
     w.attributes("-topmost", True)
     w.configure(bg="#1a1233")
@@ -225,7 +225,7 @@ def show_window_result(data, text):
 
     w = tk.Tk()
     _current_win = w
-    w.title("Vibe-Radar")
+    w.title("Vibe-Lens")
     w.overrideredirect(True)
     w.attributes("-topmost", True)
     w.configure(bg="#1a1233")
@@ -344,7 +344,7 @@ def create_tray():
         os._exit(0)
 
     menu = pystray.Menu(
-        pystray.MenuItem("Vibe-Radar", None, enabled=False),
+        pystray.MenuItem("Vibe-Lens", None, enabled=False),
         pystray.Menu.SEPARATOR,
         pystray.MenuItem("选中文字即可鉴定", None, enabled=False),
         pystray.Menu.SEPARATOR,
@@ -352,13 +352,13 @@ def create_tray():
                          lambda icon, item: __import__('webbrowser').open("http://localhost:8000")),
         pystray.MenuItem("退出", on_quit),
     )
-    return pystray.Icon("vibe-radar", img, "Vibe-Radar", menu)
+    return pystray.Icon("vibe-lens", img, "Vibe-Lens", menu)
 
 
 # ═══════ Main ═══════
 def main():
     print("=" * 45)
-    print("  Vibe-Radar Desktop")
+    print("  Vibe-Lens Desktop")
     print("=" * 45)
 
     if not ensure_backend():

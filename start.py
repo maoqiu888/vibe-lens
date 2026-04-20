@@ -1,5 +1,5 @@
 """
-Vibe-Radar 一键启动
+Vibe-Lens 一键启动
 运行: python start.py
 效果: 启动后端 + 自动打开浏览器（带划词功能）
 """
@@ -108,7 +108,7 @@ def open_browser_with_extension():
 
 def main():
     print("=" * 50)
-    print("  ✦ Vibe-Radar · 审美雷达")
+    print("  ✦ Vibe-Lens · 审美雷达")
     print("=" * 50)
     print()
 
@@ -132,7 +132,7 @@ def main():
     open_browser_with_extension()
 
     print()
-    print("✦ Vibe-Radar 已启动！")
+    print("✦ Vibe-Lens 已启动！")
     print("  • Web 版: http://localhost:8000")
     print("  • 划词: 在任意网页选中文字 → 点击紫色图标")
     print("  • 按 Ctrl+C 停止")

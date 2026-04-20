@@ -10,7 +10,7 @@ const CONSTELLATIONS = [
 export async function renderPersonalityQuiz(root: HTMLElement): Promise<void> {
   root.innerHTML = `
     <div class="vr-personality-quiz">
-      <h2>Vibe-Radar 快速定位</h2>
+      <h2>Vibe-Lens 快速定位</h2>
       <p class="vr-quiz-sub">告诉我一点关于你的事，让 Vibe 马上懂你</p>
 
       <label class="vr-field-label">你的 MBTI <span class="vr-optional">（可选）</span></label>

@@ -2,7 +2,7 @@ export function renderWelcome(root: HTMLElement): void {
   root.innerHTML = `
     <div class="vr-welcome">
       <div class="vr-welcome-logo">◉ ◉ ◉</div>
-      <h2>Vibe-Radar</h2>
+      <h2>Vibe-Lens</h2>
       <p class="vr-welcome-tagline">我会通过你的真实行为认识你</p>
       <p class="vr-welcome-hint">
         去下列任意网站划一段文字，<br>
