@@ -146,11 +146,12 @@ async function onIconClick(text: string, domain: Domain, excludeItems?: string[]
   card.className = "vr-card vr-stream-card";
   card.innerHTML = `
     <div class="vr-stream-step">
+      <div class="vr-step-text">正在联网搜索<span class="vr-step-dots"></span></div>
       <div class="vr-step-bar"><div class="vr-step-fill"></div></div>
       <div class="vr-step-labels">
-        <span class="vr-step-label active">搜索</span>
-        <span class="vr-step-label">识别</span>
-        <span class="vr-step-label">分析</span>
+        <span class="vr-step-label active">🔍 搜索</span>
+        <span class="vr-step-label">✦ 识别</span>
+        <span class="vr-step-label">🧠 分析</span>
       </div>
     </div>
     <div class="vr-stream-score" style="display:none"></div>
@@ -163,6 +164,16 @@ async function onIconClick(text: string, domain: Domain, excludeItems?: string[]
 
   const stepFill = card.querySelector(".vr-step-fill") as HTMLElement;
   const stepLabels = card.querySelectorAll(".vr-step-label");
+  const stepTextEl = card.querySelector(".vr-step-text") as HTMLElement;
+
+  // Step text animation (rotates even if backend is slow)
+  const STEP_TEXTS = ["正在联网搜索", "正在识别作品", "正在匹配分析"];
+  let stepIdx = 0;
+  const rotateText = window.setInterval(() => {
+    stepIdx = (stepIdx + 1) % STEP_TEXTS.length;
+    if (stepTextEl) stepTextEl.innerHTML = STEP_TEXTS[stepIdx] + '<span class="vr-step-dots"></span>';
+  }, 1800);
+  const stopTextRotation = () => clearInterval(rotateText);
   const scoreEl = card.querySelector(".vr-stream-score") as HTMLElement;
   const verdictEl = card.querySelector(".vr-stream-verdict") as HTMLElement;
   const roastEl = card.querySelector(".vr-stream-roast") as HTMLElement;
@@ -186,6 +197,9 @@ async function onIconClick(text: string, domain: Domain, excludeItems?: string[]
       if (s) {
         stepFill.style.width = `${s.pct}%`;
         stepLabels.forEach((l, j) => l.classList.toggle("active", j <= s.labels));
+        // Sync current text with actual step
+        stepIdx = s.labels;
+        if (stepTextEl) stepTextEl.innerHTML = STEP_TEXTS[stepIdx] + '<span class="vr-step-dots"></span>';
       }
     } else if (msg.event === "identified") {
       // Show score immediately (base_score, will be updated by done)
@@ -195,6 +209,7 @@ async function onIconClick(text: string, domain: Domain, excludeItems?: string[]
     } else if (msg.event === "done") {
       finalResult = msg.data as AnalyzeResult;
       stepFill.style.width = "100%";
+      stopTextRotation();
 
       // Hide progress bar
       const stepSection = card.querySelector(".vr-stream-step") as HTMLElement;
@@ -229,6 +244,7 @@ async function onIconClick(text: string, domain: Domain, excludeItems?: string[]
       const cacheKey = `vr_cache_${text}_${domain}`;
       chrome.storage.local.set({ [cacheKey]: finalResult });
     } else if (msg.event === "error") {
+      stopTextRotation();
       card.className = "vr-card vr-error";
       card.textContent = msg.data.code === "BACKEND_DOWN"
         ? "后端未运行，请先启动 FastAPI"
