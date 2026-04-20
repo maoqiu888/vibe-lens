@@ -71,7 +71,7 @@ FastAPI Backend
 ### 一键启动
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/vibe-radar.git
+git clone https://github.com/maoqiu888/vibe-lens.git
 cd vibe-radar
 
 # Windows: 双击 start.bat
