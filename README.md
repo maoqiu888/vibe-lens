@@ -284,6 +284,12 @@ Vibe-Lens 的 24 维向量 + 用户反馈数据，天然是一个推荐系统的
 - **跨文化审美**：中国用户 vs 欧美用户的 24 维分布有什么系统性差异？
 - **审美漂移 (Taste Drift)**：用户的审美画像随时间如何变化？有没有"审美生命周期"？
 
+## Community
+
+本项目由 [LINUX DO](https://linux.do) 社区支持推广。
+
+[![LINUX DO](https://img.shields.io/badge/LINUX%20DO-社区-blue?logo=discourse)](https://linux.do)
+
 ## Contributing
 
 欢迎 PR 和 Issue！详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
